@@ -23,6 +23,9 @@ pub use encryptor::*;
 pub mod private_key;
 pub use private_key::*;
 
+pub mod private_key_ex;
+pub use private_key_ex::*;
+
 pub mod private_key_ciphertext;
 pub use private_key_ciphertext::*;
 

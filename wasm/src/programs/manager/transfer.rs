@@ -56,7 +56,7 @@ impl ProgramManager {
         recipient: &str,
         transfer_type: &str,
         amount_record: Option<RecordPlaintext>,
-        fee_credits: f64,
+        priority_fee: f64,
         fee_record: Option<RecordPlaintext>,
         url: Option<String>,
         transfer_proving_key: Option<ProvingKey>,
@@ -65,9 +65,9 @@ impl ProgramManager {
         fee_verifying_key: Option<VerifyingKey>,
     ) -> Result<Transaction, String> {
         log("Executing transfer program");
-        let fee_microcredits = match &fee_record {
-            Some(fee_record) => Self::validate_amount(fee_credits, fee_record, true)?,
-            None => (fee_credits * 1_000_000.0) as u64,
+        let priority_fee = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee, fee_record, true)?,
+            None => (priority_fee * 1_000_000.0) as u64,
         };
         let amount_microcredits = match &amount_record {
             Some(amount_record) => Self::validate_amount(amount_credits, amount_record, true)?,
@@ -153,20 +153,48 @@ impl ProgramManager {
         let query = QueryNative::from(node_url);
         trace.prepare_async(query).await.map_err(|err| err.to_string())?;
 
-        log("Proving the transfer execution");
-        let execution =
-            trace.prove_execution::<CurrentAleo, _>("credits.aleo/transfer", rng).map_err(|e| e.to_string())?;
+        let program = ProgramNative::from_str(&program).map_err(|_| "The program ID provided was invalid".to_string())?;
+
+        let locator = program.id().to_string().add("/").add(&transfer_type);
+        log(&format!("transfer trace prove_execution locator {locator}"));
+        // Prove the execution and fee
+        let execution = trace
+            .prove_execution::<CurrentAleo, _>(&locator, rng)
+            .map_err(|e| e.to_string())?;
         let execution_id = execution.to_execution_id().map_err(|e| e.to_string())?;
 
         log("Verifying the transfer execution");
         process.verify_execution(&execution).map_err(|err| err.to_string())?;
+
+        // Get the storage cost in bytes for the program execution
+        let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;
+
+        // Compute the finalize cost in microcredits.
+        let mut finalize_cost = 0u64;
+        // Iterate over the transitions to accumulate the finalize cost.
+        for transition in execution.transitions() {
+            // Retrieve the function name.
+            let function_name = transition.function_name();
+            // Retrieve the finalize cost.
+            let cost = match program.get_function(function_name).map_err(|e| e.to_string())?.finalize_logic() {
+                Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string())?,
+                None => continue,
+            };
+            // Accumulate the finalize cost.
+            finalize_cost = finalize_cost
+                .checked_add(cost)
+                .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
+        }
+        
+        let minimum_fee_cost = finalize_cost + storage_cost;
 
         log("Executing the fee");
         let fee = execute_fee!(
             process,
             private_key,
             fee_record,
-            fee_microcredits,
+            minimum_fee_cost,
+            priority_fee,
             node_url,
             fee_proving_key,
             fee_verifying_key,
