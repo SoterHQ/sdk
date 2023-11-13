@@ -17,7 +17,7 @@
 use crate::{
     account::ViewKey,
     record::RecordCiphertext,
-    types::{CurrentNetwork, Network, Field, RecordPlaintextNative as Record}, PrivateKey,
+    types::native::{CurrentNetwork, Network, Field, RecordPlaintextNative as Record}, PrivateKey,
 };
 
 use core::ops::Deref;
