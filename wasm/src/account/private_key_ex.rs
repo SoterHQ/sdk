@@ -17,7 +17,8 @@
 use crate::{
     account::ViewKey,
     record::RecordCiphertext,
-    types::native::{CurrentNetwork, Network, Field, RecordPlaintextNative as Record}, PrivateKey,
+    types::native::RecordPlaintextNative as Record,
+    PrivateKey,
 };
 
 use core::ops::Deref;
@@ -25,16 +26,9 @@ use wasm_bindgen::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
-
-#[derive(Serialize)]
-pub struct OldRecordData<N: Network> {
-    record: Record,
-    transactionid: N::TransitionID,
-    serial_number: Field<CurrentNetwork>,
-}
-
 #[derive(Serialize)]
 pub struct RecordData {
+    record_ciphertext: String,
     record: Record,
     identifier: String,
     serial_number: String,
@@ -66,7 +60,6 @@ pub struct RecordOrgData {
 
 #[wasm_bindgen]
 impl PrivateKey {
-
     #[wasm_bindgen(js_name = "decryptrecords")]
     pub fn decrypt_records(&self, recordstext: &str) -> Result<String, String> {
         let record_org_datas: Vec<RecordOrgData> = serde_json::from_str(recordstext).unwrap_or_default();
@@ -79,6 +72,7 @@ impl PrivateKey {
                     let record_name = &record_org.identifier;
                     if let Ok(serial_number) = plaintext.serial_number_string(&self, &program_id, record_name) {
                         let record_data: RecordData = RecordData {
+                            record_ciphertext: record_org.record_ciphertext,
                             record: plaintext.deref().clone(),
                             identifier: record_org.identifier,
                             serial_number,
