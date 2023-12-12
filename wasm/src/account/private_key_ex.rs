@@ -19,78 +19,88 @@ use crate::{
     record::RecordCiphertext,
     types::native::RecordPlaintextNative as Record,
     PrivateKey,
+    RecordPlaintext,
 };
 
 use core::ops::Deref;
+use rayon::prelude::*;
 use wasm_bindgen::prelude::*;
+
+use anyhow::Result as AnyhowResult;
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub struct RecordData {
-    record_ciphertext: String,
-    record: Record,
-    identifier: String,
-    serial_number: String,
-    program_id: String,
-    height: u32,
-    timestamp: i64,
-    block_hash: String,
-    transaction_id: String,
-    transition_id: String,
-    function_name: String,
-    output_index: u8,
-    input: Option<Vec<String>>,
+    pub record: Record,
+    pub serial_number: String,
+    #[serde(flatten)]
+    pub record_meta: RecordMeta,
 }
 
 #[derive(Deserialize)]
 pub struct RecordOrgData {
-    record_ciphertext: String,
-    identifier: String,
-    program_id: String,
-    height: u32,
-    timestamp: i64,
-    block_hash: String,
-    transaction_id: String,
-    transition_id: String,
-    function_name: String,
-    output_index: u8,
-    input: Option<Vec<String>>,
+    #[serde(flatten)]
+    pub record_meta: RecordMeta,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RecordMeta {
+    pub record_ciphertext: String,
+    pub identifier: String,
+    pub program_id: String,
+    pub height: u32,
+    pub timestamp: i64,
+    pub block_hash: String,
+    pub transaction_id: String,
+    pub transition_id: String,
+    pub function_name: String,
+    pub output_index: u8,
+    pub input: Option<Vec<String>>,
+    pub address: Option<String>,
 }
 
 #[wasm_bindgen]
 impl PrivateKey {
     #[wasm_bindgen(js_name = "decryptrecords")]
     pub fn decrypt_records(&self, recordstext: &str) -> Result<String, String> {
+        let address = self.to_address();
+        let address = address.to_string();
         let record_org_datas: Vec<RecordOrgData> = serde_json::from_str(recordstext).unwrap_or_default();
-        let mut records = Vec::new();
-        for record_org in record_org_datas {
-            if let Ok(record) = RecordCiphertext::from_string(&record_org.record_ciphertext) {
-                if let Ok(plaintext) = record.decrypt(&ViewKey::from_private_key(&self)) {
-                    let program_id = record_org.program_id.clone();
+        let decrypted_records = record_org_datas
+            .par_iter()
+            .map(|record_org_data| decrypt_record_data(self, record_org_data, &address))
+            .collect::<Result<Vec<String>, _>>().unwrap_or_default();
 
-                    let record_name = &record_org.identifier;
-                    if let Ok(serial_number) = plaintext.serial_number_string(&self, &program_id, record_name) {
-                        let record_data: RecordData = RecordData {
-                            record_ciphertext: record_org.record_ciphertext,
-                            record: plaintext.deref().clone(),
-                            identifier: record_org.identifier,
-                            serial_number,
-                            program_id,
-                            height: record_org.height,
-                            timestamp: record_org.timestamp,
-                            block_hash: record_org.block_hash,
-                            transaction_id: record_org.transaction_id,
-                            transition_id: record_org.transition_id,
-                            function_name: record_org.function_name,
-                            output_index: record_org.output_index,
-                            input: record_org.input,
-                        };
-                        records.push(record_data)
-                    };
-                };
-            };
-        }
-        Ok(serde_json::to_string_pretty(&records).unwrap_or_default().replace("\\n", ""))
+        Ok(serde_json::to_string_pretty(&decrypted_records).unwrap_or_default().replace("\\n", ""))
     }
+}
+
+pub fn decrypt_record_data(
+    private_key: &PrivateKey,
+    record_org: &RecordOrgData,
+    address: &str,
+) -> AnyhowResult<String> {
+    if record_org.record_meta.address.is_some() {
+        if &record_org.record_meta.address.clone().unwrap() != address {
+            return Ok("".to_string());
+        }
+    }
+    if let Ok(record) = RecordCiphertext::from_string(&record_org.record_meta.record_ciphertext) {
+        if let Ok(plaintext) = record.decrypt(&ViewKey::from_private_key(private_key)) {
+            let program_id = &record_org.record_meta.program_id;
+
+            let record_name = &record_org.record_meta.identifier;
+            if let Ok(serial_number) = plaintext.serial_number_string(private_key, program_id, record_name) {
+                let record_data: RecordData = RecordData {
+                    record: plaintext.deref().clone(),
+                    serial_number,
+                    record_meta: record_org.record_meta.clone(),
+                };
+                return Ok(serde_json::to_string(&record_data)?);
+            };
+        };
+    };
+
+    Ok("".to_string())
 }
