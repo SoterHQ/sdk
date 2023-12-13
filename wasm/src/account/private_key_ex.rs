@@ -19,7 +19,6 @@ use crate::{
     record::RecordCiphertext,
     types::native::RecordPlaintextNative as Record,
     PrivateKey,
-    RecordPlaintext,
 };
 
 use core::ops::Deref;
@@ -67,17 +66,18 @@ impl PrivateKey {
         let address = self.to_address();
         let address = address.to_string();
         let record_org_datas: Vec<RecordOrgData> = serde_json::from_str(recordstext).unwrap_or_default();
+        let viewkey = ViewKey::from_private_key(&self);
         let decrypted_records = record_org_datas
-            .par_iter()
-            .map(|record_org_data| decrypt_record_data(self, record_org_data, &address))
+            .iter()
+            .map(|record_org_data| decrypt_record_data(self, &viewkey, record_org_data, &address))
             .collect::<Result<Vec<String>, _>>().unwrap_or_default();
-
         Ok(serde_json::to_string_pretty(&decrypted_records).unwrap_or_default().replace("\\n", ""))
     }
 }
 
 pub fn decrypt_record_data(
     private_key: &PrivateKey,
+    viewkey: &ViewKey,
     record_org: &RecordOrgData,
     address: &str,
 ) -> AnyhowResult<String> {
@@ -86,8 +86,9 @@ pub fn decrypt_record_data(
             return Ok("".to_string());
         }
     }
+    
     if let Ok(record) = RecordCiphertext::from_string(&record_org.record_meta.record_ciphertext) {
-        if let Ok(plaintext) = record.decrypt(&ViewKey::from_private_key(private_key)) {
+        if let Ok(plaintext) = record.decrypt(viewkey) {
             let program_id = &record_org.record_meta.program_id;
 
             let record_name = &record_org.record_meta.identifier;
