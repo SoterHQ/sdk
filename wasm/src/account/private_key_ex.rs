@@ -69,8 +69,8 @@ impl PrivateKey {
         let viewkey = ViewKey::from_private_key(&self);
         let decrypted_records = record_org_datas
             .iter()
-            .map(|record_org_data| decrypt_record_data(self, &viewkey, record_org_data, &address))
-            .collect::<Result<Vec<String>, _>>().unwrap_or_default();
+            .filter_map(|record_org_data| decrypt_record_data(self, &viewkey, record_org_data, &address).transpose())
+            .collect::<Result<Vec<RecordData>, _>>().unwrap_or_default();
         Ok(serde_json::to_string_pretty(&decrypted_records).unwrap_or_default().replace("\\n", ""))
     }
 }
@@ -80,10 +80,10 @@ pub fn decrypt_record_data(
     viewkey: &ViewKey,
     record_org: &RecordOrgData,
     address: &str,
-) -> AnyhowResult<String> {
+) -> AnyhowResult<Option<RecordData>> {
     if record_org.record_meta.address.is_some() {
         if &record_org.record_meta.address.clone().unwrap() != address {
-            return Ok("".to_string());
+            return Ok(None);
         }
     }
     
@@ -98,10 +98,10 @@ pub fn decrypt_record_data(
                     serial_number,
                     record_meta: record_org.record_meta.clone(),
                 };
-                return Ok(serde_json::to_string(&record_data)?);
+                return Ok(Some(record_data));
             };
         };
     };
 
-    Ok("".to_string())
+    Ok(None)
 }
