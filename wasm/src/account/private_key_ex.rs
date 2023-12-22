@@ -14,12 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    account::ViewKey,
-    record::RecordCiphertext,
-    types::native::RecordPlaintextNative as Record,
-    PrivateKey,
-};
+use crate::{account::ViewKey, record::RecordCiphertext, types::native::RecordPlaintextNative as Record, PrivateKey};
 
 use core::ops::Deref;
 use rayon::prelude::*;
@@ -56,7 +51,7 @@ pub struct RecordMeta {
     pub function_name: String,
     pub output_index: u8,
     pub input: Option<Vec<String>>,
-    pub address: Option<String>,
+    pub address: String,
 }
 
 #[wasm_bindgen]
@@ -70,7 +65,8 @@ impl PrivateKey {
         let decrypted_records = record_org_datas
             .iter()
             .filter_map(|record_org_data| decrypt_record_data(self, &viewkey, record_org_data, &address).transpose())
-            .collect::<Result<Vec<RecordData>, _>>().unwrap_or_default();
+            .collect::<Result<Vec<RecordData>, _>>()
+            .unwrap_or_default();
         Ok(serde_json::to_string_pretty(&decrypted_records).unwrap_or_default().replace("\\n", ""))
     }
 }
@@ -81,12 +77,10 @@ pub fn decrypt_record_data(
     record_org: &RecordOrgData,
     address: &str,
 ) -> AnyhowResult<Option<RecordData>> {
-    if record_org.record_meta.address.is_some() {
-        if &record_org.record_meta.address.clone().unwrap() != address {
-            return Ok(None);
-        }
+    if &record_org.record_meta.address != "" && record_org.record_meta.address != address {
+        return Ok(None);
     }
-    
+
     if let Ok(record) = RecordCiphertext::from_string(&record_org.record_meta.record_ciphertext) {
         if let Ok(plaintext) = record.decrypt(viewkey) {
             let program_id = &record_org.record_meta.program_id;
