@@ -31,7 +31,7 @@ pub use transfer::*;
 
 const DEFAULT_URL: &str = "https://api.explorer.aleo.org/v1";
 
-use crate::{KeyPair, PrivateKey, ProvingKey, RecordPlaintext, VerifyingKey};
+use crate::{KeyPair, PrivateKey, ProvingKey, RecordCiphertext, RecordPlaintext, VerifyingKey, ViewKey};
 
 use crate::types::native::{
     cost_in_microcredits,
@@ -56,18 +56,30 @@ pub struct ProgramManager;
 impl ProgramManager {
     /// Validate that an amount being paid from a record is greater than zero and that the record
     /// has enough credits to pay the amount
-    pub(crate) fn validate_amount(credits: f64, amount: &RecordPlaintext, fee: bool) -> Result<u64, String> {
+    pub(crate) fn validate_amount(microcredits: u64, amount: &RecordPlaintext, fee: bool) -> Result<u64, String> {
         let name = if fee { "Fee" } else { "Amount" };
 
-        if credits <= 0.0 {
-            return Err(format!("{name} must be greater than zero to deploy or execute a program"));
-        }
-        let microcredits = (credits * 1_000_000.0f64) as u64;
         if amount.microcredits() < microcredits {
             return Err(format!("{name} record does not have enough credits to pay the specified fee"));
         }
 
         Ok(microcredits)
+    }
+
+    pub(crate) fn parse_record(private_key: &PrivateKey, record: String) -> Result<RecordPlaintext, String> {
+        match record.starts_with("record1") {
+            true => {
+                // Parse the ciphertext.
+                let ciphertext =
+                    RecordCiphertext::from_str(&record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+                // Derive the view key.
+                let view_key: ViewKey = private_key.to_view_key();
+                // Decrypt the ciphertext.
+                // ciphertext.decrypt(view_key)
+                ciphertext.decrypt(&view_key)
+            }
+            false => RecordPlaintext::from_str(&record).map_err(|_| "RecordPlaintext from_str".to_string()),
+        }
     }
 
     /// Synthesize proving and verifying keys for a program

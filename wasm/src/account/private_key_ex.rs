@@ -17,7 +17,6 @@
 use crate::{account::ViewKey, record::RecordCiphertext, types::native::RecordPlaintextNative as Record, PrivateKey};
 
 use core::ops::Deref;
-use rayon::prelude::*;
 use wasm_bindgen::prelude::*;
 
 use anyhow::Result as AnyhowResult;

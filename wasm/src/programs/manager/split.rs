@@ -16,7 +16,7 @@
 
 use super::*;
 
-use crate::{execute_program, log, process_inputs, OfflineQuery, PrivateKey, RecordPlaintext, Transaction};
+use crate::{execute_program, log, process_inputs, OfflineQuery, PrivateKey, Transaction};
 
 use crate::types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative};
 use js_sys::Array;
@@ -39,14 +39,15 @@ impl ProgramManager {
     #[allow(clippy::too_many_arguments)]
     pub async fn split(
         private_key: &PrivateKey,
-        split_amount: f64,
-        amount_record: RecordPlaintext,
+        split_amount: u64,
+        amount_record: String,
         url: Option<String>,
         split_proving_key: Option<ProvingKey>,
         split_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing split program");
+        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
         let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
 
         log("Setup the program and inputs");

@@ -23,7 +23,6 @@ use crate::{
     process_inputs,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
 };
 
@@ -60,12 +59,12 @@ impl ProgramManager {
     #[allow(clippy::too_many_arguments)]
     pub async fn transfer(
         private_key: &PrivateKey,
-        amount_credits: f64,
+        amount_microcredits: u64,
         recipient: &str,
         transfer_type: &str,
-        amount_record: Option<RecordPlaintext>,
-        priority_fee: f64,
-        fee_record: Option<RecordPlaintext>,
+        amount_record: Option<String>,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
         url: Option<String>,
         transfer_proving_key: Option<ProvingKey>,
         transfer_verifying_key: Option<VerifyingKey>,
@@ -74,13 +73,31 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing transfer program");
-        let priority_fee = match &fee_record {
-            Some(fee_record) => Self::validate_amount(priority_fee, fee_record, true)?,
-            None => (priority_fee * 1_000_000.0) as u64,
+        // Prepare the fees.
+        let amount_record = match amount_record {
+            Some(amount_record) => {
+                Some(Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
         };
+
+        // Prepare the fees.
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+
+
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+
         let amount_microcredits = match &amount_record {
-            Some(amount_record) => Self::validate_amount(amount_credits, amount_record, true)?,
-            None => (amount_credits * 1_000_000.0) as u64,
+            Some(amount_record) => Self::validate_amount(amount_microcredits, amount_record, true)?,
+            None => amount_microcredits,
         };
 
         log("Setup the program and inputs");
@@ -207,7 +224,7 @@ impl ProgramManager {
             private_key,
             fee_record,
             minimum_fee_cost,
-            priority_fee,
+            priority_fee_in_microcredits,
             node_url,
             fee_proving_key,
             fee_verifying_key,

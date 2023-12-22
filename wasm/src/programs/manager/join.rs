@@ -23,7 +23,6 @@ use crate::{
     process_inputs,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
 };
 
@@ -59,10 +58,10 @@ impl ProgramManager {
     #[allow(clippy::too_many_arguments)]
     pub async fn join(
         private_key: &PrivateKey,
-        record_1: RecordPlaintext,
-        record_2: RecordPlaintext,
-        priority_fee: f64,
-        fee_record: Option<RecordPlaintext>,
+        record_1: String,
+        record_2: String,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
         url: Option<String>,
         join_proving_key: Option<ProvingKey>,
         join_verifying_key: Option<VerifyingKey>,
@@ -71,11 +70,21 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing join program");
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+
         let priority_fee = match &fee_record {
-            Some(fee_record) => Self::validate_amount(priority_fee, fee_record, true)?,
-            None => (priority_fee * 1_000_000.0) as u64,
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
         };
         let rng = &mut StdRng::from_entropy();
+
+        let record_1 = Self::parse_record(&private_key, record_1).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let record_2 = Self::parse_record(&private_key, record_2).map_err(|_| "RecordCiphertext from_str".to_string())?;
 
         log("Setup program and inputs");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);

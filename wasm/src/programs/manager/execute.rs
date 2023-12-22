@@ -25,7 +25,6 @@ use crate::{
     ExecutionResponse,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
 };
 
@@ -151,8 +150,8 @@ impl ProgramManager {
         program: &str,
         function: &str,
         inputs: Array,
-        priority_fee: f64,
-        fee_record: Option<RecordPlaintext>,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
         url: Option<String>,
         imports: Option<Object>,
         proving_key: Option<ProvingKey>,
@@ -162,9 +161,16 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log(&format!("Executing function: {function} on-chain"));
-        let priority_fee = match &fee_record {
-            Some(fee_record) => Self::validate_amount(priority_fee, fee_record, true)?,
-            None => (priority_fee * 1_000_000.0) as u64,
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+        
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
         };
 
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
@@ -231,7 +237,7 @@ impl ProgramManager {
             private_key,
             fee_record,
             minimum_fee_cost,
-            priority_fee,
+            priority_fee_in_microcredits,
             node_url,
             fee_proving_key,
             fee_verifying_key,
