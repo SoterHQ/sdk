@@ -42,5 +42,8 @@ pub use response::*;
 pub mod transaction;
 pub use transaction::*;
 
+pub mod authorization;
+pub use authorization::*;
+
 pub mod verifying_key;
 pub use verifying_key::*;

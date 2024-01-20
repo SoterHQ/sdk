@@ -38,6 +38,7 @@ pub use snarkvm_ledger_block::{Execution, Transaction};
 pub use snarkvm_ledger_query::Query;
 pub use snarkvm_ledger_store::helpers::memory::BlockMemory;
 pub use snarkvm_synthesizer::{
+    Authorization,
     cost_in_microcredits,
     deployment_cost,
     snark::{ProvingKey, VerifyingKey},
@@ -83,4 +84,5 @@ pub type ProvingKeyNative = ProvingKey<CurrentNetwork>;
 pub type QueryNative = Query<CurrentNetwork, CurrentBlockMemory>;
 pub type ResponseNative = Response<CurrentNetwork>;
 pub type TransactionNative = Transaction<CurrentNetwork>;
+pub type AuthorizationNative = Authorization<CurrentNetwork>;
 pub type VerifyingKeyNative = VerifyingKey<CurrentNetwork>;
