@@ -265,13 +265,12 @@ impl ProgramManager {
         minimum_fee_cost: u64,
         priority_fee_in_microcredits: u64,
         fee_record: Option<String>,
-        url: Option<String>,
         transfer_proving_key: Option<ProvingKey>,
         transfer_verifying_key: Option<VerifyingKey>,
         fee_proving_key: Option<ProvingKey>,
         fee_verifying_key: Option<VerifyingKey>,
     ) -> Result<String, String> {
-        log("Executing transfer program");
+        log("Transfer authorize");
         // Prepare the fees.
         let amount_record = match amount_record {
             Some(amount_record) => Some(
@@ -299,7 +298,6 @@ impl ProgramManager {
         };
 
         log("Setup the program and inputs");
-        let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
         let program = ProgramNative::credits().unwrap().to_string();
         let rng = &mut StdRng::from_entropy();
 
@@ -362,7 +360,7 @@ impl ProgramManager {
         }
 
         let mut authorizations: Vec<Authorization> = Vec::new();
-        log("Executing transfer function");
+        log("Executing transfer authorize function");
         let authorize_program = authorize_program!(
             process,
             process_inputs!(inputs),
@@ -387,7 +385,6 @@ impl ProgramManager {
             fee_record,
             minimum_fee_cost,
             priority_fee_in_microcredits,
-            node_url,
             fee_proving_key,
             fee_verifying_key,
             execution_id,

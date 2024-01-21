@@ -18,14 +18,7 @@ use super::*;
 use core::ops::Add;
 
 use crate::{
-    execute_fee,
-    execute_program,
-    log,
-    process_inputs,
-    ExecutionResponse,
-    OfflineQuery,
-    PrivateKey,
-    Transaction,
+    authorize_fee, authorize_program, execute_fee, execute_program, log, process_inputs, Authorization, ExecutionResponse, OfflineQuery, PrivateKey, Transaction
 };
 
 use crate::types::native::{
@@ -368,5 +361,79 @@ impl ProgramManager {
             Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string()),
             None => Ok(0u64),
         }
+    }
+
+    #[wasm_bindgen(js_name = buildExecutionAuthorize)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn execute_authorize(
+        private_key: &PrivateKey,
+        program: &str,
+        function: &str,
+        inputs: Array,
+        minimum_fee_cost: u64,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
+        imports: Option<Object>,
+        proving_key: Option<ProvingKey>,
+        verifying_key: Option<VerifyingKey>,
+        fee_proving_key: Option<ProvingKey>,
+        fee_verifying_key: Option<VerifyingKey>,
+    ) -> Result<String, String> {
+        log(&format!("Execute authorizing"));
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+        
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+
+        let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
+        let process = &mut process_native;
+
+        log("Check program imports are valid and add them to the process");
+        let program_native = ProgramNative::from_str(program).map_err(|e| e.to_string())?;
+        ProgramManager::resolve_imports(process, &program_native, imports)?;
+        let rng = &mut StdRng::from_entropy();
+
+        let mut authorizations: Vec<Authorization> = Vec::new();
+        log("Executing program authorize");
+        let authorize_program = authorize_program!(
+            process,
+            process_inputs!(inputs),
+            program,
+            function,
+            private_key,
+            proving_key,
+            verifying_key,
+            rng
+        );
+
+        log("Creating execution_id for execute program");
+        let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values(), &None)
+            .map_err(|e| e.to_string())?
+            .root();
+
+        authorizations.push(Authorization::from(authorize_program));
+
+        let authorize_fee = authorize_fee!(
+            process,
+            private_key,
+            fee_record,
+            minimum_fee_cost,
+            priority_fee_in_microcredits,
+            fee_proving_key,
+            fee_verifying_key,
+            execution_id,
+            rng
+        );
+
+        authorizations.push(Authorization::from(authorize_fee));
+
+        Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
 }

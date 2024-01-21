@@ -230,7 +230,7 @@ macro_rules! authorize_program {
 
 #[macro_export]
 macro_rules! authorize_fee {
-    ($process:expr, $private_key:expr, $fee_record:expr, $minimum_cost_fee_microcredits:expr, $priority_fee:expr, $submission_url:expr, $fee_proving_key:expr, $fee_verifying_key:expr, $execution_id:expr, $rng:expr) => {{
+    ($process:expr, $private_key:expr, $fee_record:expr, $minimum_cost_fee_microcredits:expr, $priority_fee:expr, $fee_proving_key:expr, $fee_verifying_key:expr, $execution_id:expr, $rng:expr) => {{
         if (($fee_proving_key.is_some() && $fee_verifying_key.is_none())
             || ($fee_proving_key.is_none() && $fee_verifying_key.is_some()))
         {
