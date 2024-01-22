@@ -6,7 +6,7 @@
 <p align="center">
     <a href="https://developer.aleo.org"> <img alt="Website" src="https://img.shields.io/badge/Developer_Docs-online-blue"></a>
     <a href="https://circleci.com/gh/AleoHQ/aleo"><img src="https://circleci.com/gh/AleoHQ/sdk.svg?style=svg"></a>
-    <a href="https://discord.gg/5v2ynrw2ds"><img src="https://img.shields.io/discord/700454073459015690?logo=discord"/></a>
+    <a href="https://discord.com/invite/aleo"><img src="https://img.shields.io/discord/700454073459015690?logo=discord"/></a>
     <a href="https://github.com/AleoHQ/sdk#%EF%B8%8F-contributors"><img src="https://img.shields.io/badge/contributors-23-ee8449"/></a>
 </p>
 
@@ -252,7 +252,7 @@ any resulting state changes in private or public data.
 
 A simple example of running the hello world program on the Aleo network is shown below:
 ```typescript
-import { Account, AleoNetworkClient, NetworkRecordProvider, ProgramManager, KeySearchParams} from '@aleohq/sdk';
+import { Account, AleoNetworkClient, NetworkRecordProvider, ProgramManager, KeySearchParams } from '@aleohq/sdk';
 
 // Create a key provider that will be used to find public proving & verifying keys for Aleo programs
 const keyProvider = new AleoKeyProvider();
@@ -263,12 +263,20 @@ const networkClient = new AleoNetworkClient("https://api.explorer.aleo.org/v1");
 const recordProvider = new NetworkRecordProvider(account, networkClient);
 
 // Initialize a program manager to talk to the Aleo network with the configured key and record providers
-const programName = "hello_hello.aleo";
 const programManager = new ProgramManager("https://api.explorer.aleo.org/v1", keyProvider, recordProvider);
 
 // Provide a key search parameter to find the correct key for the program if they are stored in a memory cache
 const keySearchParams = { "cacheKey": "hello_hello:hello" };
-const tx_id = await programManager.execute(programName, "hello_hello", 0.020, ["5u32", "5u32"], undefined, undefined, undefined, keySearchParams);
+
+// Execute the program using the options provided inline
+const tx_id = await programManager.execute({
+    programName: "hello_hello.aleo",
+    functionName: "hello_hello",
+    fee: 0.020,
+    privateFee: false, // Assuming a value for privateFee
+    inputs: ["5u32", "5u32"],
+    keySearchParams: keySearchParams
+});
 const transaction = await programManager.networkClient.getTransaction(tx_id);
 ```
 
