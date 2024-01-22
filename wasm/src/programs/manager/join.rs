@@ -17,13 +17,7 @@
 use super::*;
 
 use crate::{
-    execute_fee,
-    execute_program,
-    log,
-    process_inputs,
-    OfflineQuery,
-    PrivateKey,
-    Transaction,
+    authorize_fee, authorize_program, execute_fee, execute_program, log, process_inputs, Authorization, OfflineQuery, PrivateKey, Transaction
 };
 
 use crate::types::native::{
@@ -180,5 +174,101 @@ impl ProgramManager {
         log("Creating execution transaction for join");
         let transaction = TransactionNative::from_execution(execution, Some(fee)).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
+    }
+    
+    #[wasm_bindgen(js_name = buildJoinAuthorize)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn join_authorize(
+        private_key: &PrivateKey,
+        record_1: String,
+        record_2: String,
+        minimum_fee_cost: u64,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
+        url: Option<String>,
+        join_proving_key: Option<ProvingKey>,
+        join_verifying_key: Option<VerifyingKey>,
+        fee_proving_key: Option<ProvingKey>,
+        fee_verifying_key: Option<VerifyingKey>,
+    ) -> Result<String, String> {
+        log("Authorize join program");
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+
+        let priority_fee = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+        let rng = &mut StdRng::from_entropy();
+
+        let record_1 = Self::parse_record(&private_key, record_1).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let record_2 = Self::parse_record(&private_key, record_2).map_err(|_| "RecordCiphertext from_str".to_string())?;
+
+        log("Setup program and inputs");
+        let program = ProgramNative::credits().unwrap().to_string();
+        let inputs = Array::new_with_length(2);
+        inputs.set(0u32, wasm_bindgen::JsValue::from_str(&record_1.to_string()));
+        inputs.set(1u32, wasm_bindgen::JsValue::from_str(&record_2.to_string()));
+
+        let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
+        let process = &mut process_native;
+
+        let stack = process.get_stack("credits.aleo").map_err(|e| e.to_string())?;
+        let fee_identifier = if fee_record.is_some() {
+            IdentifierNative::from_str("fee_private").map_err(|e| e.to_string())?
+        } else {
+            IdentifierNative::from_str("fee_public").map_err(|e| e.to_string())?
+        };
+        if !stack.contains_proving_key(&fee_identifier) && fee_proving_key.is_some() && fee_verifying_key.is_some() {
+            let fee_proving_key = fee_proving_key.clone().unwrap();
+            let fee_verifying_key = fee_verifying_key.clone().unwrap();
+            stack
+                .insert_proving_key(&fee_identifier, ProvingKeyNative::from(fee_proving_key))
+                .map_err(|e| e.to_string())?;
+            stack
+                .insert_verifying_key(&fee_identifier, VerifyingKeyNative::from(fee_verifying_key))
+                .map_err(|e| e.to_string())?;
+        }
+
+        let mut authorizations: Vec<Authorization> = Vec::new();
+        log("Authorizing join authorize");
+        let authorize_program = authorize_program!(
+            process,
+            process_inputs!(inputs),
+            &program,
+            "join",
+            private_key,
+            join_proving_key,
+            join_verifying_key,
+            rng
+        );
+
+        log("Creating execution_id for execute program");
+        let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values(), &None)
+            .map_err(|e| e.to_string())?
+            .root();
+
+        authorizations.push(Authorization::from(authorize_program));
+
+        log("Authorizing the fee");
+        let authorize_fee = authorize_fee!(
+            process,
+            private_key,
+            fee_record,
+            minimum_fee_cost,
+            priority_fee,
+            fee_proving_key,
+            fee_verifying_key,
+            execution_id,
+            rng
+        );
+
+        authorizations.push(Authorization::from(authorize_fee));
+
+        Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
 }
