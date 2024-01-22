@@ -412,13 +412,13 @@ impl ProgramManager {
             verifying_key,
             rng
         );
+        authorizations.push(Authorization::from(authorize_program.clone()));
 
         log("Creating execution_id for execute program");
         let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values(), &None)
             .map_err(|e| e.to_string())?
             .root();
 
-        authorizations.push(Authorization::from(authorize_program));
 
         let authorize_fee = authorize_fee!(
             process,
