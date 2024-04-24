@@ -22,33 +22,33 @@ crate-type = [ "cdylib", "rlib" ]
 doctest = false
 
 [dependencies.snarkvm-circuit-network]
-version = "=0.16.12"
+version = "=0.16.19"
 
 [dependencies.snarkvm-console]
-version = "=0.16.12"
+version = "=0.16.19"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-block]
-version = "=0.16.12"
+version = "=0.16.19"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-query]
-version = "=0.16.12"
+version = "=0.16.19"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-ledger-store]
-version = "=0.16.12"
+version = "=0.16.19"
 
 [dependencies.snarkvm-parameters]
-version = "=0.16.12"
+version = "=0.16.19"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-synthesizer]
-version = "=0.16.12"
+version = "=0.16.19"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-wasm]
-version = "0.16.12"
+version = "0.16.19"
 features = [ "console", "fields", "utilities" ]
 
 [dependencies.anyhow]
@@ -103,7 +103,7 @@ version = "0.2"
 features = [ "serde-serialize" ]
 
 [dependencies.wasm-bindgen-futures]
-version = "0.4.37"
+version = "0.4.40"
 
 [dependencies.spmc]
 version = "0.3.0"
