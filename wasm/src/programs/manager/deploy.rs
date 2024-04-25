@@ -114,7 +114,7 @@ impl ProgramManager {
         }
 
         log("Ensuring the fee is sufficient to pay for the deployment");
-        let (minimum_deployment_cost, (_, _)) =
+        let (minimum_deployment_cost, (_, _, _)) =
             deployment_cost::<CurrentNetwork>(&deployment).map_err(|err| err.to_string())?;
 
         let deployment_id = deployment.to_deployment_id().map_err(|e| e.to_string())?;
@@ -257,7 +257,7 @@ impl ProgramManager {
         }
 
         log("Estimate the deployment fee");
-        let (minimum_deployment_cost, (_, _)) =
+        let (minimum_deployment_cost, (_, _, _)) =
             deployment_cost::<CurrentNetwork>(&deployment).map_err(|err| err.to_string())?;
 
         Ok(minimum_deployment_cost)

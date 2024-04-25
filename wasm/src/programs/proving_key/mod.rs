@@ -15,7 +15,6 @@
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
 mod credits;
-pub use credits::*;
 
 use crate::types::native::{FromBytes, ProvingKeyNative, ToBytes};
 
@@ -111,6 +110,7 @@ impl PartialEq for ProvingKey {
 mod tests {
     use super::*;
     use wasm_bindgen_test::*;
+    pub use credits::*;
 
     const TRANSFER_PUBLIC_PROVER: &str = "https://testnet3.parameters.aleo.org/transfer_public.prover.a74565e";
 

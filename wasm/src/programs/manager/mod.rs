@@ -15,26 +15,20 @@
 // along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
 
 pub mod deploy;
-pub use deploy::*;
 
 pub mod execute;
-pub use execute::*;
 
 pub mod join;
-pub use join::*;
 
 pub mod split;
-pub use split::*;
 
 pub mod transfer;
-pub use transfer::*;
 
 const DEFAULT_URL: &str = "https://api.explorer.aleo.org/v1";
 
 use crate::{KeyPair, PrivateKey, ProvingKey, RecordCiphertext, RecordPlaintext, VerifyingKey, ViewKey};
 
 use crate::types::native::{
-    cost_in_microcredits,
     deployment_cost,
     IdentifierNative,
     ProcessNative,
@@ -161,6 +155,15 @@ impl ProgramManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    pub use deploy::*;
+
+    pub use execute::*;
+
+    pub use join::*;
+
+    pub use split::*;
+
+    pub use transfer::*;
 
     use js_sys::{Object, Reflect};
     use wasm_bindgen::JsValue;

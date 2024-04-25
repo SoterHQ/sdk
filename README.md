@@ -6,6 +6,12 @@
     <a href="https://github.com/AleoHQ/sdk#%EF%B8%8F-contributors"><img src="https://img.shields.io/badge/contributors-23-ee8449"/></a>
 </p>
 
+# Build WASM
+
+```sh
+cd wasm
+export RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+mutable-globals -C link-arg=--max-memory=4294967296" && rustup run nightly wasm-pack build --release --target web --out-dir ../../pkg/aleo-wasm -- --no-default-features --features "browser"  -Z build-std=panic_abort,std
+```
 
 # Zero Knowledge Web App SDK
 

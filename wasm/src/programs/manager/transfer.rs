@@ -201,21 +201,22 @@ impl ProgramManager {
         let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;
 
         // Compute the finalize cost in microcredits.
-        let mut finalize_cost = 0u64;
+        // todo
+        let finalize_cost = 0u64;
         // Iterate over the transitions to accumulate the finalize cost.
-        for transition in execution.transitions() {
-            // Retrieve the function name.
-            let function_name = transition.function_name();
-            // Retrieve the finalize cost.
-            let cost = match program.get_function(function_name).map_err(|e| e.to_string())?.finalize_logic() {
-                Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string())?,
-                None => continue,
-            };
-            // Accumulate the finalize cost.
-            finalize_cost = finalize_cost
-                .checked_add(cost)
-                .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
-        }
+        // for transition in execution.transitions() {
+        //     // Retrieve the function name.
+        //     let function_name = transition.function_name();
+        //     // Retrieve the finalize cost.
+        //     let cost = match program.get_function(function_name).map_err(|e| e.to_string())?.finalize_logic() {
+        //         Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string())?,
+        //         None => continue,
+        //     };
+        //     // Accumulate the finalize cost.
+        //     finalize_cost = finalize_cost
+        //         .checked_add(cost)
+        //         .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
+        // }
 
         let minimum_fee_cost = finalize_cost + storage_cost;
 

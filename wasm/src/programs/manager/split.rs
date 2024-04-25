@@ -99,7 +99,7 @@ impl ProgramManager {
         private_key: &PrivateKey,
         split_amount: u64,
         amount_record: String,
-        url: Option<String>,
+        _url: Option<String>,
         split_proving_key: Option<ProvingKey>,
         split_verifying_key: Option<VerifyingKey>,
     ) -> Result<String, String> {

@@ -22,33 +22,41 @@ crate-type = [ "cdylib", "rlib" ]
 doctest = false
 
 [dependencies.snarkvm-circuit-network]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 
 [dependencies.snarkvm-console]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-block]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-query]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-ledger-store]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 
 [dependencies.snarkvm-parameters]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-synthesizer]
-version = "=0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-wasm]
-version = "0.16.19"
+git = "https://github.com/AleoHQ/snarkVM.git"
+rev = "43abe1b"
 features = [ "console", "fields", "utilities" ]
 
 [dependencies.anyhow]
@@ -123,9 +131,11 @@ features = [
 version = "0.3.37"
 
 [features]
-default = [ "serial", "browser" ]
+default = [ "serial", "browser", "mainnetv0" ]
 serial = [ "snarkvm-console/serial", "snarkvm-synthesizer/serial", "snarkvm-ledger-query/serial", "snarkvm-ledger-block/serial", "snarkvm-ledger-store/serial" ]
 browser = [ ]
+mainnetv0 = []
+testnetv0 = []
 
 ## Profiles
 [profile.release]
