@@ -170,19 +170,6 @@ impl ProvingKey {
             == ProvingKey::prover_checksum(snarkvm_parameters::mainnet::TransferPublicToPrivateProver::METADATA)
     }
 
-    /// Verify if the proving key is for the unbond_delegator_as_validator function
-    ///
-    /// @example
-    /// const provingKey = ProvingKey.fromBytes("unbond_delegator_as_validator_proving_key.bin");
-    /// provingKey.isUnbondDelegatorAsValidatorProver() ? console.log("Key verified") : throw new Error("Invalid key");
-    ///
-    /// @returns {boolean} returns true if the proving key is for the unbond_delegator_as_validator function, false if otherwise
-    #[wasm_bindgen(js_name = "isUnbondDelegatorAsValidatorProver")]
-    pub fn is_unbond_delegator_as_validator_prover(&self) -> bool {
-        self.checksum()
-            == ProvingKey::prover_checksum(snarkvm_parameters::mainnet::UnbondDelegatorAsValidatorProver::METADATA)
-    }
-
     /// Verify if the proving key is for the unbond_delegator_as_delegator function
     ///
     /// @example

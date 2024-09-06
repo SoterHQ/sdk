@@ -50,11 +50,11 @@ pub use snarkvm_wasm::{
 };
 
 // Network types
-#[cfg(feature = "mainnetv0")]
+#[cfg(feature = "mainnet")]
 pub type CurrentAleo = snarkvm_circuit_network::AleoV0;
 #[cfg(feature = "testnetv0")]
 pub type CurrentAleo = snarkvm_circuit_network::AleoTestnetV0;
-#[cfg(feature = "mainnetv0")]
+#[cfg(feature = "mainnet")]
 pub type CurrentNetwork = snarkvm_console::network::MainnetV0;
 #[cfg(feature = "testnetv0")]
 pub type CurrentNetwork = snarkvm_console::network::TestnetV0;

@@ -121,17 +121,6 @@ impl VerifyingKey {
     /// Returns the verifying key for the unbond_delegator_as_delegator function
     ///
     /// @returns {VerifyingKey} Verifying key for the unbond_delegator_as_delegator function
-    #[wasm_bindgen(js_name = "unbondDelegatorAsValidatorVerifier")]
-    pub fn unbond_delegator_as_validator_verifier() -> VerifyingKey {
-        VerifyingKey::from_bytes(
-            &snarkvm_parameters::mainnet::UnbondDelegatorAsValidatorVerifier::load_bytes().unwrap(),
-        )
-        .unwrap()
-    }
-
-    /// Returns the verifying key for the unbond_delegator_as_delegator function
-    ///
-    /// @returns {VerifyingKey} Verifying key for the unbond_delegator_as_delegator function
     #[wasm_bindgen(js_name = "unbondPublicVerifier")]
     pub fn unbond_public_verifier() -> VerifyingKey {
         VerifyingKey::from_bytes(&snarkvm_parameters::mainnet::UnbondPublicVerifier::load_bytes().unwrap()).unwrap()
@@ -249,26 +238,6 @@ impl VerifyingKey {
             &snarkvm_parameters::mainnet::TransferPublicToPrivateVerifier::load_bytes().unwrap(),
         )
         .unwrap()
-    }
-
-    /// Verifies the verifying key is for the unbond_delegator_as_delegator function
-    ///
-    /// @returns {bool}
-    #[wasm_bindgen(js_name = "isUnbondDelegatorAsValidatorVerifier")]
-    pub fn is_unbond_delegator_as_validator_verifier(&self) -> bool {
-        self == &VerifyingKey::from_bytes(
-            &snarkvm_parameters::mainnet::UnbondDelegatorAsValidatorVerifier::load_bytes().unwrap(),
-        )
-        .unwrap()
-    }
-
-    /// Verifies the verifying key is for the unbond_public function
-    ///
-    /// @returns {bool}
-    #[wasm_bindgen(js_name = "isUnbondPublicVerifier")]
-    pub fn is_unbond_public_verifier(&self) -> bool {
-        self == &VerifyingKey::from_bytes(&snarkvm_parameters::mainnet::UnbondPublicVerifier::load_bytes().unwrap())
-            .unwrap()
     }
 }
 

@@ -23,40 +23,40 @@ doctest = false
 
 [dependencies.snarkvm-circuit-network]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 
 [dependencies.snarkvm-console]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-block]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-query]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-ledger-store]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 
 [dependencies.snarkvm-parameters]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-synthesizer]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-wasm]
 git = "https://github.com/AleoHQ/snarkVM.git"
-rev = "140ff26"
+rev = "02994a1"
 features = [ "console", "fields", "utilities" ]
 
 [dependencies.anyhow]
@@ -131,10 +131,10 @@ features = [
 version = "0.3.37"
 
 [features]
-default = [ "serial", "browser", "testnetv0" ]
+default = [ "serial", "browser", "mainnet" ]
 serial = [ "snarkvm-console/serial", "snarkvm-synthesizer/serial", "snarkvm-ledger-query/serial", "snarkvm-ledger-block/serial", "snarkvm-ledger-store/serial" ]
 browser = [ ]
-mainnetv0 = []
+mainnet = []
 testnetv0 = []
 
 ## Profiles

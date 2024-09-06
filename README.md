@@ -10,7 +10,7 @@
 
 ```sh
 cd wasm
-export RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+mutable-globals -C link-arg=--max-memory=4294967296" && rustup run nightly wasm-pack build --release --target web --out-dir ../../pkg/aleo-wasm -- --no-default-features --features "browser,mainnetv0"  -Z build-std=panic_abort,std
+export RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+mutable-globals -C link-arg=--max-memory=4294967296" && rustup run nightly wasm-pack build --release --target web --out-dir ../../pkg/aleo-wasm -- --no-default-features --features "browser,mainnet"  -Z build-std=panic_abort,std
 ```
 
 # Zero Knowledge Web App SDK
