@@ -45,6 +45,7 @@ pub use snarkvm_synthesizer::{
     Process,
     Program,
     process::{cost_in_microcredits_v2, deployment_cost},
+    Authorization,
     snark::{ProvingKey, VerifyingKey},
 };
 pub use snarkvm_wasm::{
@@ -103,4 +104,5 @@ pub type QueryNative = Query<CurrentNetwork, CurrentBlockMemory>;
 pub type ResponseNative = Response<CurrentNetwork>;
 pub type TransactionNative = Transaction<CurrentNetwork>;
 pub type TransitionNative = Transition<CurrentNetwork>;
+pub type AuthorizationNative = Authorization<CurrentNetwork>;
 pub type VerifyingKeyNative = VerifyingKey<CurrentNetwork>;

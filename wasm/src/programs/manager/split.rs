@@ -21,6 +21,8 @@ use crate::{
     PrivateKey,
     RecordPlaintext,
     Transaction,
+    Authorization,
+    authorize_program,
     execute_program,
     log,
     process_inputs,
@@ -47,18 +49,16 @@ impl ProgramManager {
     #[allow(clippy::too_many_arguments)]
     pub async fn split(
         private_key: &PrivateKey,
-        split_amount: f64,
-        amount_record: RecordPlaintext,
+        split_amount: u64,
+        amount_record: String,
         url: Option<String>,
         split_proving_key: Option<ProvingKey>,
         split_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing split program");
-        let amount_microcredits = (split_amount * 1_000_000.0) as u64;
-        if amount_microcredits > amount_record.microcredits() {
-            return Err("Amount record does not have enough credits".to_string());
-        }
+        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
 
         log("Setup the program and inputs");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
@@ -102,5 +102,47 @@ impl ProgramManager {
         log("Creating execution transaction for split");
         let transaction = TransactionNative::from_execution(execution, None).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
+    }
+
+    #[wasm_bindgen(js_name = buildSplitAuthorize)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn split_authorize(
+        private_key: &PrivateKey,
+        split_amount: u64,
+        amount_record: String,
+        _url: Option<String>,
+        split_proving_key: Option<ProvingKey>,
+        split_verifying_key: Option<VerifyingKey>,
+    ) -> Result<String, String> {
+        log("Authorize split program");
+        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
+
+        log("Setup the program and inputs");
+        let program = ProgramNative::credits().unwrap().to_string();
+        let inputs = Array::new_with_length(2u32);
+        inputs.set(0u32, wasm_bindgen::JsValue::from_str(&amount_record.to_string()));
+        inputs.set(1u32, wasm_bindgen::JsValue::from_str(&amount_microcredits.to_string().add("u64")));
+
+        let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
+        let process = &mut process_native;
+        let rng = &mut StdRng::from_entropy();
+
+        let mut authorizations: Vec<Authorization> = Vec::new();
+        log("Authorizing the split function");
+        let authorize_program = authorize_program!(
+            process,
+            process_inputs!(inputs),
+            &program,
+            "split",
+            private_key,
+            split_proving_key,
+            split_verifying_key,
+            rng
+        );
+
+        authorizations.push(Authorization::from(authorize_program));
+
+        Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
 }

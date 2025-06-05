@@ -19,8 +19,11 @@ use super::*;
 use crate::{
     OfflineQuery,
     PrivateKey,
+    Authorization,
     RecordPlaintext,
     Transaction,
+    authorize_fee,
+    authorize_program,
     execute_fee,
     log,
     types::native::{
@@ -35,10 +38,27 @@ use crate::{
     },
 };
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
-
+use anyhow::Error;
 use js_sys::Object;
-use rand::{SeedableRng, rngs::StdRng};
+use rand::{rngs::StdRng, SeedableRng};
+use serde::Serialize;
+use snarkvm_console::program::{
+    to_bits_le,
+    Network,
+    ProgramOwner,
+    ToBits,
+    ToBytes,
+    TransactionLeaf,
+    TRANSACTION_DEPTH,
+};
 use std::str::FromStr;
+
+#[wasm_bindgen]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+struct MyStruct {
+    authorization: Authorization,
+    program_owner: ProgramOwner<CurrentNetwork>,
+}
 
 #[wasm_bindgen]
 impl ProgramManager {
@@ -64,8 +84,8 @@ impl ProgramManager {
     pub async fn deploy(
         private_key: &PrivateKey,
         program: &str,
-        priority_fee_credits: f64,
-        fee_record: Option<RecordPlaintext>,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
         url: Option<String>,
         imports: Option<Object>,
         fee_proving_key: Option<ProvingKey>,
@@ -73,6 +93,19 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Creating deployment transaction");
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "parse_record fee_record".to_string())?)
+            }
+            None => None,
+        };
+
+        // Convert fee to microcredits and check that the fee record has enough credits to pay it
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
@@ -94,33 +127,113 @@ impl ProgramManager {
         let (minimum_deployment_cost, (_, _, _)) =
             deployment_cost::<CurrentNetwork>(&deployment).map_err(|err| err.to_string())?;
 
-        // Check to see if the fee record has enough microcredits to pay for the deployment.
-        let priority_fee_microcredits = (priority_fee_credits * 1_000_000.0) as u64;
-        Self::validate_fee_record(&fee_record, minimum_deployment_cost, priority_fee_microcredits)?;
-
         let deployment_id = deployment.to_deployment_id().map_err(|e| e.to_string())?;
 
         let fee = execute_fee!(
             process,
             private_key,
             fee_record,
-            priority_fee_microcredits,
+            minimum_deployment_cost,
+            priority_fee_in_microcredits,
             node_url,
             fee_proving_key,
             fee_verifying_key,
             deployment_id,
             rng,
-            offline_query,
-            minimum_deployment_cost
+            offline_query
         );
 
         // Create the program owner
-        let owner = ProgramOwnerNative::new(private_key, deployment_id, rng).map_err(|err| err.to_string())?;
+        let owner = ProgramOwnerNative::new(private_key, deployment_id, rng)
+            .map_err(|err| err.to_string())?;
+
+        log("Verifying the deployment and fees");
+        process
+            .verify_deployment::<CurrentAleo, _>(&deployment, &mut StdRng::from_entropy())
+            .map_err(|err| err.to_string())?;
 
         log("Creating deployment transaction");
         Ok(Transaction::from(
             TransactionNative::from_deployment(owner, deployment, fee).map_err(|err| err.to_string())?,
         ))
+    }
+
+    #[wasm_bindgen(js_name = buildDeploymentAuthorize)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn deploy_authorize(
+        private_key: &PrivateKey,
+        program: &str,
+        minimum_deployment_cost: u64,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
+        imports: Option<Object>,
+        fee_proving_key: Option<ProvingKey>,
+        fee_verifying_key: Option<VerifyingKey>,
+    ) -> Result<String, String> {
+        log("Creating deployment transaction");
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "parse_record fee_record".to_string())?)
+            }
+            None => None,
+        };
+
+        // Convert fee to microcredits and check that the fee record has enough credits to pay it
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+
+        let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
+        let process = &mut process_native;
+
+        log("Checking program has a valid name");
+        let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
+
+        log("Checking program imports are valid and add them to the process");
+        ProgramManager::resolve_imports(process, &program, imports)?;
+        let rng = &mut StdRng::from_entropy();
+
+        log("Creating deployment");
+        // let deployment = process.deploy::<CurrentAleo, _>(&program, rng).map_err(|err| err.to_string())?;
+        // if deployment.program().functions().is_empty() {
+        //     return Err("Attempted to create an empty transaction deployment".to_string());
+        // }
+
+        // let deployment_id = deployment.to_deployment_id().map_err(|e| e.to_string())?;
+
+        let leaves = program.functions().values().enumerate().map(|(index, function)| {
+            // Construct the transaction leaf.
+            Ok(TransactionLeaf::new_deployment(
+                u16::try_from(index)?,
+                CurrentNetwork::hash_bhp1024(&to_bits_le![program.id(), function.to_bytes_le()?])?,
+            )
+            .to_bits_le())
+        });
+        // If the fee is present, add it to the leaves.
+        let leaves = leaves.collect::<Result<Vec<_>, Error>>().unwrap();
+        // Compute the deployment tree.
+        let deployment_id =
+            *CurrentNetwork::merkle_tree_bhp::<TRANSACTION_DEPTH>(&leaves).map_err(|e| e.to_string())?.root();
+
+        let authorize_fee = authorize_fee!(
+            process,
+            private_key,
+            fee_record,
+            minimum_deployment_cost,
+            priority_fee_in_microcredits,
+            fee_proving_key,
+            fee_verifying_key,
+            deployment_id,
+            rng
+        );
+
+        // Create the program owner
+        let owner = ProgramOwnerNative::new(private_key, deployment_id, &mut StdRng::from_entropy())
+            .map_err(|err| err.to_string())?;
+
+        let my_struct: MyStruct = MyStruct { authorization: Authorization::from(authorize_fee), program_owner: owner };
+        Ok(serde_json::to_string_pretty(&my_struct).unwrap_or_default())
     }
 
     /// Estimate the fee for a program deployment

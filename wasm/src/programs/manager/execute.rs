@@ -15,14 +15,18 @@
 // along with the Provable SDK library. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use core::ops::Add;
 
 use crate::{
+    Authorization,
     ExecutionResponse,
     OfflineQuery,
     PrivateKey,
     RecordPlaintext,
     Transaction,
     calculate_minimum_fee,
+    authorize_fee,
+    authorize_program,
     execute_fee,
     execute_program,
     log,
@@ -42,7 +46,7 @@ use snarkvm_console::network::{ConsensusVersion, Network};
 use snarkvm_ledger_query::QueryTrait;
 use snarkvm_synthesizer::prelude::{cost_in_microcredits_v1, execution_cost_v1, execution_cost_v2};
 
-use core::ops::Add;
+// use core::ops::Add;
 use js_sys::{Array, Object};
 use rand::{SeedableRng, rngs::StdRng};
 use std::str::FromStr;
@@ -158,8 +162,8 @@ impl ProgramManager {
         program: &str,
         function: &str,
         inputs: Array,
-        priority_fee_credits: f64,
-        fee_record: Option<RecordPlaintext>,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
         url: Option<String>,
         imports: Option<Object>,
         proving_key: Option<ProvingKey>,
@@ -169,6 +173,18 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log(&format!("Executing function: {function} on-chain"));
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+        
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
+
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
@@ -206,26 +222,41 @@ impl ProgramManager {
             .map_err(|e| e.to_string())?;
         let execution_id = execution.to_execution_id().map_err(|e| e.to_string())?;
 
-        log("Calculating the minimum execution fee");
-        let minimum_execution_cost = calculate_minimum_fee!(offline_query, node_url, process, &execution);
+        // Get the storage cost in bytes for the program execution
+        let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;
 
-        // Check to see if the fee record has enough microcredits to pay for the deployment.
-        let priority_fee_microcredits = (priority_fee_credits * 1_000_000.0) as u64;
-        Self::validate_fee_record(&fee_record, minimum_execution_cost, priority_fee_microcredits)?;
+        // Compute the finalize cost in microcredits.
+        let finalize_cost = 0u64;
+        // todo
+        // // Iterate over the transitions to accumulate the finalize cost.
+        // for transition in execution.transitions() {
+        //     // Retrieve the function name.
+        //     let function_name = transition.function_name();
+        //     // Retrieve the finalize cost.
+        //     let cost = match program.get_function(function_name).map_err(|e| e.to_string())?.finalize_logic() {
+        //         Some(finalize) => cost_in_microcredits(finalize, function_name).map_err(|e| e.to_string())?,
+        //         None => continue,
+        //     };
+        //     // Accumulate the finalize cost.
+        //     finalize_cost = finalize_cost
+        //         .checked_add(cost)
+        //         .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
+        // }
+        let minimum_fee_cost = finalize_cost + storage_cost;
 
-        log("Executing fee");
+        log(&format!("Executing fee {minimum_fee_cost} (storage_cost:{storage_cost} finalize_cost:{finalize_cost})"));
         let fee = execute_fee!(
             process,
             private_key,
             fee_record,
-            priority_fee_microcredits,
+            minimum_fee_cost,
+            priority_fee_in_microcredits,
             node_url,
             fee_proving_key,
             fee_verifying_key,
             execution_id,
             rng,
-            offline_query,
-            minimum_execution_cost
+            offline_query
         );
 
         // Verify the execution
@@ -314,26 +345,26 @@ impl ProgramManager {
         let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;
 
         // Compute the finalize cost in microcredits.
-        let mut finalize_cost = 0u64;
+        // todo
+        let finalize_cost = 0u64;
         // Iterate over the transitions to accumulate the finalize cost.
-        for transition in execution.transitions() {
-            // Retrieve the function name, program id, and program.
-            let function_name = transition.function_name();
-            let program_id = transition.program_id();
-            let stack = process.get_stack(program_id).map_err(|e| e.to_string())?;
+        // for transition in execution.transitions() {
+        //     // Retrieve the function name, program id, and program.
+        //     let function_name = transition.function_name();
+        //     let program_id = transition.program_id();
+        //     let program = process.get_program(program_id).map_err(|e| e.to_string())?;
 
-            // Calculate the finalize cost for the function identified in the transition
-            let cost = if block_height >= CurrentNetwork::CONSENSUS_HEIGHT(ConsensusVersion::V2).unwrap() {
-                cost_in_microcredits_v2(stack, function_name).map_err(|e| e.to_string())?
-            } else {
-                cost_in_microcredits_v1(stack, function_name).map_err(|e| e.to_string())?
-            };
+        //     // Calculate the finalize cost for the function identified in the transition
+        //     let cost = match &program.get_function(function_name).map_err(|e| e.to_string())?.finalize_logic() {
+        //         Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string())?,
+        //         None => continue,
+        //     };
 
-            // Accumulate the finalize cost.
-            finalize_cost = finalize_cost
-                .checked_add(cost)
-                .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
-        }
+        //     // Accumulate the finalize cost.
+        //     finalize_cost = finalize_cost
+        //         .checked_add(cost)
+        //         .ok_or("The finalize cost computation overflowed for an execution".to_string())?;
+        // }
         Ok(storage_cost + finalize_cost)
     }
 
@@ -345,21 +376,93 @@ impl ProgramManager {
     ///
     /// @param program The program containing the function to estimate the finalize fee for
     /// @param function The function to estimate the finalize fee for
-    /// @returns {u64} Fee in microcredits
+    /// @returns {u64 | Error} Fee in microcredits
     #[wasm_bindgen(js_name = estimateFinalizeFee)]
-    pub fn estimate_finalize_fee(program: &str, function: &str) -> Result<u64, String> {
+    pub fn estimate_finalize_fee(_program: &str, _function: &str) -> Result<u64, String> {
         log(
             "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
         );
+        // todo
+        // let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
+        // let function_id = IdentifierNative::from_str(function).map_err(|err| err.to_string())?;
+        // match program.get_function(&function_id).map_err(|err| err.to_string())?.finalize_logic() {
+        //     Some(finalize) => cost_in_microcredits(finalize).map_err(|e| e.to_string()),
+        //     None => Ok(0u64),
+        // }
+        Ok(0u64)
+    }
+
+    #[wasm_bindgen(js_name = buildExecutionAuthorize)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn execute_authorize(
+        private_key: &PrivateKey,
+        program: &str,
+        function: &str,
+        inputs: Array,
+        minimum_fee_cost: u64,
+        priority_fee_in_microcredits: u64,
+        fee_record: Option<String>,
+        imports: Option<Object>,
+        proving_key: Option<ProvingKey>,
+        verifying_key: Option<VerifyingKey>,
+        fee_proving_key: Option<ProvingKey>,
+        fee_verifying_key: Option<VerifyingKey>,
+    ) -> Result<String, String> {
+        log(&format!("Execute authorizing"));
+        let fee_record = match fee_record {
+            Some(fee_record) => {
+                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
+            }
+            None => None,
+        };
+        
+        let priority_fee_in_microcredits = match &fee_record {
+            Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
+            None => priority_fee_in_microcredits,
+        };
 
         let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
         let process = &mut process_native;
 
-        let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
-        let function_id = IdentifierNative::from_str(function).map_err(|err| err.to_string())?;
+        log("Check program imports are valid and add them to the process");
+        let program_native = ProgramNative::from_str(program).map_err(|e| e.to_string())?;
+        ProgramManager::resolve_imports(process, &program_native, imports)?;
+        let rng = &mut StdRng::from_entropy();
 
-        let stack = process.get_stack(program.id()).map_err(|e| e.to_string())?;
+        let mut authorizations: Vec<Authorization> = Vec::new();
+        log("Executing program authorize");
+        let authorize_program = authorize_program!(
+            process,
+            process_inputs!(inputs),
+            program,
+            function,
+            private_key,
+            proving_key,
+            verifying_key,
+            rng
+        );
+        authorizations.push(Authorization::from(authorize_program.clone()));
 
-        cost_in_microcredits_v2(stack, &function_id).map_err(|e| e.to_string())
+        log("Creating execution_id for execute program");
+        let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values())
+            .map_err(|e| e.to_string())?
+            .root();
+
+
+        let authorize_fee = authorize_fee!(
+            process,
+            private_key,
+            fee_record,
+            minimum_fee_cost,
+            priority_fee_in_microcredits,
+            fee_proving_key,
+            fee_verifying_key,
+            execution_id,
+            rng
+        );
+
+        authorizations.push(Authorization::from(authorize_fee));
+
+        Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
 }

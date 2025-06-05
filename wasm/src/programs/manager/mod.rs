@@ -27,6 +27,8 @@ use crate::{
     PrivateKey,
     ProvingKey,
     RecordPlaintext,
+    RecordCiphertext,
+    ViewKey,
     VerifyingKey,
     log,
     types::native::{
@@ -53,6 +55,34 @@ pub struct ProgramManager;
 
 #[wasm_bindgen]
 impl ProgramManager {
+    /// Validate that an amount being paid from a record is greater than zero and that the record
+    /// has enough credits to pay the amount
+    pub(crate) fn validate_amount(microcredits: u64, amount: &RecordPlaintext, fee: bool) -> Result<u64, String> {
+        let name = if fee { "Fee" } else { "Amount" };
+
+        if amount.microcredits() < microcredits {
+            return Err(format!("{name} record does not have enough credits to pay the specified fee"));
+        }
+
+        Ok(microcredits)
+    }
+
+    pub(crate) fn parse_record(private_key: &PrivateKey, record: String) -> Result<RecordPlaintext, String> {
+        match record.starts_with("record1") {
+            true => {
+                // Parse the ciphertext.
+                let ciphertext =
+                    RecordCiphertext::from_str(&record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+                // Derive the view key.
+                let view_key: ViewKey = private_key.to_view_key();
+                // Decrypt the ciphertext.
+                // ciphertext.decrypt(view_key)
+                ciphertext.decrypt(&view_key)
+            }
+            false => RecordPlaintext::from_str(&record).map_err(|_| "RecordPlaintext from_str".to_string()),
+        }
+    }
+
     /// Synthesize proving and verifying keys for a program
     ///
     /// @param program {string} The program source code of the program to synthesize keys for

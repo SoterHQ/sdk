@@ -42,5 +42,8 @@ pub use proving_key::*;
 pub mod response;
 pub use response::*;
 
+pub mod authorization;
+pub use authorization::*;
+
 pub mod verifying_key;
 pub use verifying_key::*;
