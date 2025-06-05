@@ -44,7 +44,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
 use snarkvm_console::prelude::{ConsensusVersion, Network};
 use snarkvm_ledger_query::QueryTrait;
-use snarkvm_synthesizer::prelude::{execution_cost_v1, execution_cost_v2};
+use snarkvm_synthesizer::{prelude::{execution_cost_v1, execution_cost_v2}, process::InclusionVersion};
 use snarkvm_synthesizer_program::StackKeys;
 
 use std::{ops::Add, str::FromStr};
@@ -213,7 +213,7 @@ impl ProgramManager {
         let execution_id = execution.to_execution_id().map_err(|e| e.to_string())?;
 
         log("Verifying the transfer execution");
-        process.verify_execution(VarunaVersion::V2, &execution).map_err(|err| err.to_string())?;
+        process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
 
         // Get the storage cost in bytes for the program execution
         let storage_cost = execution.size_in_bytes().map_err(|e| e.to_string())?;

@@ -38,6 +38,7 @@ use crate::{
     },
 };
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
+use snarkvm_synthesizer::process::InclusionVersion;
 use anyhow::Error;
 use js_sys::Object;
 use rand::{rngs::StdRng, SeedableRng};

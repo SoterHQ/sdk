@@ -33,6 +33,7 @@ use crate::{
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
 use js_sys::{Array, Object, Reflect};
+use snarkvm_synthesizer::process::InclusionVersion;
 use std::{ops::Deref, str::FromStr};
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
@@ -182,5 +183,5 @@ pub fn verify_function_execution(
     }
 
     // Verify the execution.
-    process.verify_execution(VarunaVersion::V2, execution).map_or(Ok(false), |_| Ok(true))
+    process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, execution).map_or(Ok(false), |_| Ok(true))
 }
