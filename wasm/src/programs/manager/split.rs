@@ -1,26 +1,34 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
-// This file is part of the Aleo SDK library.
+// Copyright (C) 2019-2025 Provable Inc.
+// This file is part of the Provable SDK library.
 
-// The Aleo SDK library is free software: you can redistribute it and/or modify
+// The Provable SDK library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// The Aleo SDK library is distributed in the hope that it will be useful,
+// The Provable SDK library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with the Aleo SDK library. If not, see <https://www.gnu.org/licenses/>.
+// along with the Provable SDK library. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
 
-use crate::{authorize_program, execute_program, log, process_inputs, Authorization, OfflineQuery, PrivateKey, Transaction};
-
-use crate::types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative};
+use crate::{
+    OfflineQuery,
+    PrivateKey,
+    RecordPlaintext,
+    Transaction,
+    execute_program,
+    log,
+    process_inputs,
+    types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative},
+};
 use js_sys::Array;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{SeedableRng, rngs::StdRng};
+use snarkvm_algorithms::snark::varuna::VarunaVersion;
 use std::{ops::Add, str::FromStr};
 
 #[wasm_bindgen]
@@ -34,21 +42,23 @@ impl ProgramManager {
     /// @param url The url of the Aleo network node to send the transaction to
     /// @param split_proving_key (optional) Provide a proving key to use for the split function
     /// @param split_verifying_key (optional) Provide a verifying key to use for the split function
-    /// @returns {Transaction | Error} Transaction object
+    /// @returns {Transaction} Transaction object
     #[wasm_bindgen(js_name = buildSplitTransaction)]
     #[allow(clippy::too_many_arguments)]
     pub async fn split(
         private_key: &PrivateKey,
-        split_amount: u64,
-        amount_record: String,
+        split_amount: f64,
+        amount_record: RecordPlaintext,
         url: Option<String>,
         split_proving_key: Option<ProvingKey>,
         split_verifying_key: Option<VerifyingKey>,
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing split program");
-        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
-        let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
+        let amount_microcredits = (split_amount * 1_000_000.0) as u64;
+        if amount_microcredits > amount_record.microcredits() {
+            return Err("Amount record does not have enough credits".to_string());
+        }
 
         log("Setup the program and inputs");
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
@@ -82,56 +92,15 @@ impl ProgramManager {
         }
 
         log("Proving the split execution");
-        let execution =
-            trace.prove_execution::<CurrentAleo, _>("credits.aleo/split", rng).map_err(|e| e.to_string())?;
+        let execution = trace
+            .prove_execution::<CurrentAleo, _>("credits.aleo/split", VarunaVersion::V2, rng)
+            .map_err(|e| e.to_string())?;
 
         log("Verifying the split execution");
-        process.verify_execution(&execution).map_err(|err| err.to_string())?;
+        process.verify_execution(VarunaVersion::V2, &execution).map_err(|err| err.to_string())?;
 
         log("Creating execution transaction for split");
         let transaction = TransactionNative::from_execution(execution, None).map_err(|err| err.to_string())?;
         Ok(Transaction::from(transaction))
-    }
-
-    #[wasm_bindgen(js_name = buildSplitAuthorize)]
-    #[allow(clippy::too_many_arguments)]
-    pub async fn split_authorize(
-        private_key: &PrivateKey,
-        split_amount: u64,
-        amount_record: String,
-        _url: Option<String>,
-        split_proving_key: Option<ProvingKey>,
-        split_verifying_key: Option<VerifyingKey>,
-    ) -> Result<String, String> {
-        log("Authorize split program");
-        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
-        let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
-
-        log("Setup the program and inputs");
-        let program = ProgramNative::credits().unwrap().to_string();
-        let inputs = Array::new_with_length(2u32);
-        inputs.set(0u32, wasm_bindgen::JsValue::from_str(&amount_record.to_string()));
-        inputs.set(1u32, wasm_bindgen::JsValue::from_str(&amount_microcredits.to_string().add("u64")));
-
-        let mut process_native = ProcessNative::load_web().map_err(|err| err.to_string())?;
-        let process = &mut process_native;
-        let rng = &mut StdRng::from_entropy();
-
-        let mut authorizations: Vec<Authorization> = Vec::new();
-        log("Authorizing the split function");
-        let authorize_program = authorize_program!(
-            process,
-            process_inputs!(inputs),
-            &program,
-            "split",
-            private_key,
-            split_proving_key,
-            split_verifying_key,
-            rng
-        );
-
-        authorizations.push(Authorization::from(authorize_program));
-
-        Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
 }
