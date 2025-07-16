@@ -15,29 +15,14 @@
 // along with the Provable SDK library. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    Address,
-    Credits,
-    GraphKey,
-    Plaintext,
-    PrivateKey,
-    js_array_from_fields,
-    record_to_js_object,
-    to_bits_array_le,
-    types::{
-        Field,
+    js_array_from_fields, record_to_js_object, to_bits_array_le, types::{
         native::{
-            CurrentNetwork,
-            EntryNative,
-            IdentifierNative,
-            PlaintextNative,
-            ProgramIDNative,
-            RecordPlaintextNative,
-        },
-    },
+            CurrentNetwork, EntryNative, FieldNative, IdentifierNative, PlaintextNative, ProgramIDNative, RecordPlaintextNative
+        }, Field
+    }, Address, Credits, GraphKey, Plaintext, PrivateKey
 };
 use snarkvm_console::{
-    prelude::{FromBytes, ToBits, ToBytes, ToFields},
-    program::Owner,
+    account::ViewKey, prelude::{FromBytes, ToBits, ToBytes, ToFields}, program::Owner
 };
 
 use anyhow::Context;
@@ -52,13 +37,15 @@ pub struct RecordPlaintext(RecordPlaintextNative);
 
 #[wasm_bindgen]
 impl RecordPlaintext {
-    pub fn commitment(&self, program_id: &str, record_name: &str) -> Result<Field, String> {
+    pub fn commitment(&self, program_id: &str, record_name: &str, record_view_key: &str) -> Result<Field, String> {
         Ok(Field::from(
             self.to_commitment(
                 &ProgramIDNative::from_str(program_id)
                     .map_err(|_| format!("{program_id} is an invalid program name"))?,
                 &IdentifierNative::from_str(record_name)
                     .map_err(|_| format!("{record_name} is an invalid identifier"))?,
+                &FieldNative::from_str(record_view_key)
+                    .map_err(|_| format!("{record_view_key} is an invalid field"))?
             )
             .map_err(|e| e.to_string())?,
         ))
@@ -227,7 +214,11 @@ impl RecordPlaintext {
         program_id: &str,
         record_name: &str,
     ) -> Result<String, String> {
-        let commitment = self.commitment(program_id, record_name)?;
+        let view_key = private_key.to_view_key();
+
+        // Compute the record view key.
+        let record_view_key = (*self.0.nonce() * *view_key.to_scalar()).to_x_coordinate().to_string();
+        let commitment = self.commitment(program_id, record_name, &record_view_key)?;
 
         let serial_number = RecordPlaintextNative::serial_number(private_key.into(), commitment.into())
             .map_err(|_| "Serial number derivation failed".to_string())?;

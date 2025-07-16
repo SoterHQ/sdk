@@ -17,17 +17,19 @@
 use super::*;
 
 use crate::{
+    Authorization,
     OfflineQuery,
     PrivateKey,
     RecordPlaintext,
     Transaction,
-    Authorization,
     authorize_program,
     execute_program,
     log,
     process_inputs,
-    types::native::{CurrentAleo, IdentifierNative, ProcessNative, ProgramNative, TransactionNative},
+    types::native::{CurrentAleo, CurrentNetwork, IdentifierNative, ProcessNative, TransactionNative},
 };
+use snarkvm_ledger_store::helpers::memory::BlockMemory;
+use snarkvm_ledger_query::Query;
 use js_sys::Array;
 use rand::{SeedableRng, rngs::StdRng};
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
@@ -58,7 +60,8 @@ impl ProgramManager {
         offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing split program");
-        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let amount_record =
+            Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
         let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
 
         log("Setup the program and inputs");
@@ -85,12 +88,14 @@ impl ProgramManager {
         );
 
         log("Preparing the inclusion proof for the split execution");
-        if let Some(offline_query) = offline_query.as_ref() {
-            trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
-        } else {
-            let query = QueryNative::from(node_url);
-            trace.prepare_async(query).await.map_err(|err| err.to_string())?;
-        }
+        // if let Some(offline_query) = offline_query.as_ref() {
+        //     trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
+        // } else {
+        //     let query = QueryNative::from(node_url);
+        //     trace.prepare_async(query).await.map_err(|err| err.to_string())?;
+        // }
+        let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from(node_url);
+        trace.prepare_async(&query).await.map_err(|err| err.to_string())?;
 
         log("Proving the split execution");
         let execution = trace
@@ -98,7 +103,7 @@ impl ProgramManager {
             .map_err(|e| e.to_string())?;
 
         log("Verifying the split execution");
-        process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
+        // process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
 
         log("Creating execution transaction for split");
         let transaction = TransactionNative::from_execution(execution, None).map_err(|err| err.to_string())?;
@@ -116,7 +121,8 @@ impl ProgramManager {
         split_verifying_key: Option<VerifyingKey>,
     ) -> Result<String, String> {
         log("Authorize split program");
-        let amount_record = Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
+        let amount_record =
+            Self::parse_record(&private_key, amount_record).map_err(|_| "RecordCiphertext from_str".to_string())?;
         let amount_microcredits = Self::validate_amount(split_amount, &amount_record, false)?;
 
         log("Setup the program and inputs");

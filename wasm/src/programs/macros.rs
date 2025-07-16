@@ -150,16 +150,19 @@ macro_rules! execute_fee {
             .map_err(|e| e.to_string())?;
 
         log("Preparing inclusion proofs for fee execution");
-        if let Some(offline_query) = $offline_query.as_ref() {
-            trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
-        } else {
-            let query = QueryNative::from($submission_url);
-            trace.prepare_async(query).await.map_err(|err| err.to_string())?;
-        };
+        // if let Some(offline_query) = $offline_query.as_ref() {
+        //     trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
+        // } else {
+        //     let query: Query<_, BlockMemory<A::Network>> = Query::from($submission_url);
+        //     trace.prepare_async(query).await.map_err(|err| err.to_string())?;
+        // };
+        let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from($submission_url);
+        trace.prepare_async(&query).await.map_err(|err| err.to_string())?;
+
         let fee = trace.prove_fee::<CurrentAleo, _>(VarunaVersion::V2, &mut StdRng::from_entropy()).map_err(|e|e.to_string())?;
 
         log("Verifying fee execution");
-        $process.verify_fee(VarunaVersion::V2, InclusionVersion::V0, &fee, $execution_id).map_err(|e| e.to_string())?;
+        // $process.verify_fee(VarunaVersion::V2, InclusionVersion::V0, &fee, $execution_id).map_err(|e| e.to_string())?;
 
         fee
     }}

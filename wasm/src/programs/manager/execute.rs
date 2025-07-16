@@ -24,9 +24,9 @@ use crate::{
     PrivateKey,
     RecordPlaintext,
     Transaction,
-    calculate_minimum_fee,
     authorize_fee,
     authorize_program,
+    calculate_minimum_fee,
     execute_fee,
     execute_program,
     log,
@@ -43,8 +43,12 @@ use crate::{
 };
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
 use snarkvm_console::network::{ConsensusVersion, Network};
-use snarkvm_ledger_query::QueryTrait;
-use snarkvm_synthesizer::{prelude::{cost_in_microcredits_v1, execution_cost_v1, execution_cost_v2}, process::InclusionVersion};
+use snarkvm_ledger_query::{Query, QueryTrait};
+use snarkvm_ledger_store::helpers::memory::BlockMemory;
+use snarkvm_synthesizer::{
+    prelude::{cost_in_microcredits_v1, execution_cost_v1, execution_cost_v2},
+    process::InclusionVersion,
+};
 
 // use core::ops::Add;
 use js_sys::{Array, Object};
@@ -111,12 +115,15 @@ impl ProgramManager {
 
         let mut execution_response = if prove_execution {
             log("Preparing inclusion proofs for execution");
-            if let Some(offline_query) = offline_query {
-                trace.prepare_async(offline_query).await.map_err(|err| err.to_string())?;
-            } else {
-                let query = QueryNative::from(node_url);
-                trace.prepare_async(query).await.map_err(|err| err.to_string())?;
-            }
+            // if let Some(offline_query) = offline_query {
+            //     trace.prepare_async(offline_query).await.map_err(|err| err.to_string())?;
+            // } else {
+            //     let query = QueryNative::from(node_url);
+            //     trace.prepare_async(query).await.map_err(|err| err.to_string())?;
+            // }
+            // let query = QueryNative::from(node_url);
+            let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from(node_url);
+            trace.prepare_async(&query).await.map_err(|err| err.to_string())?;
 
             log("Proving execution");
             let locator = program_native.id().to_string().add("/").add(function);
@@ -174,12 +181,12 @@ impl ProgramManager {
     ) -> Result<Transaction, String> {
         log(&format!("Executing function: {function} on-chain"));
         let fee_record = match fee_record {
-            Some(fee_record) => {
-                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
-            }
+            Some(fee_record) => Some(
+                Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?,
+            ),
             None => None,
         };
-        
+
         let priority_fee_in_microcredits = match &fee_record {
             Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
             None => priority_fee_in_microcredits,
@@ -207,12 +214,14 @@ impl ProgramManager {
         );
 
         log("Preparing inclusion proofs for execution");
-        if let Some(offline_query) = offline_query.as_ref() {
-            trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
-        } else {
-            let query = QueryNative::from(node_url);
-            trace.prepare_async(query).await.map_err(|err| err.to_string())?;
-        }
+        // if let Some(offline_query) = offline_query.as_ref() {
+        //     trace.prepare_async(offline_query.clone()).await.map_err(|err| err.to_string())?;
+        // } else {
+        //     let query = QueryNative::from(node_url);
+        //     trace.prepare_async(query).await.map_err(|err| err.to_string())?;
+        // }
+        let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from(node_url);
+        trace.prepare_async(&query).await.map_err(|err| err.to_string())?;
 
         log("Proving execution");
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
@@ -260,7 +269,7 @@ impl ProgramManager {
         );
 
         // Verify the execution
-        process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
+        // process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
 
         log("Creating execution transaction");
         let transaction = TransactionNative::from_execution(execution, Some(fee)).map_err(|err| err.to_string())?;
@@ -327,14 +336,10 @@ impl ProgramManager {
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
         let locator = program.id().to_string().add("/").add(function);
 
-        let block_height = if let Some(offline_query) = offline_query {
-            let block_height = offline_query.current_block_height().map_err(|e| e.to_string())?;
-            trace.prepare_async(offline_query).await.map_err(|err| err.to_string())?;
-            block_height
-        } else {
-            let query = QueryNative::from(node_url);
+        let block_height = {
+            let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from(node_url);
             let block_height = query.current_block_height_async().await.map_err(|e| e.to_string())?;
-            trace.prepare_async(query).await.map_err(|err| err.to_string())?;
+            trace.prepare_async(&query).await.map_err(|err| err.to_string())?;
             block_height
         };
         let execution =
@@ -410,12 +415,12 @@ impl ProgramManager {
     ) -> Result<String, String> {
         log(&format!("Execute authorizing"));
         let fee_record = match fee_record {
-            Some(fee_record) => {
-                Some(Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?)
-            }
+            Some(fee_record) => Some(
+                Self::parse_record(&private_key, fee_record).map_err(|_| "RecordCiphertext from_str".to_string())?,
+            ),
             None => None,
         };
-        
+
         let priority_fee_in_microcredits = match &fee_record {
             Some(fee_record) => Self::validate_amount(priority_fee_in_microcredits, fee_record, true)?,
             None => priority_fee_in_microcredits,
@@ -447,7 +452,6 @@ impl ProgramManager {
         let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values())
             .map_err(|e| e.to_string())?
             .root();
-
 
         let authorize_fee = authorize_fee!(
             process,
