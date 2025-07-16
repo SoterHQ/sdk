@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct RecordData {
-    pub record: Record,
+    pub record: String,
     pub serial_number: String,
     #[serde(flatten)]
     pub record_meta: RecordMeta,
@@ -92,7 +92,7 @@ pub fn serial_number_record(private_key: &PrivateKey, record_org: &RecordData) -
     let record_name = &record_org.record_meta.identifier;
 
     if let Ok(serial_number) =
-        RecordPlaintext::from(record_org.record.clone()).serial_number_string(private_key, program_id, record_name)
+        RecordPlaintext::from_string(&record_org.record.clone()).unwrap().serial_number_string(private_key, program_id, record_name)
     {
         let record_data: RecordData = RecordData {
             record: record_org.record.clone(),
@@ -121,7 +121,7 @@ pub fn decrypt_record_data(
             let record_name = &record_org.record_meta.identifier;
             if let Ok(serial_number) = plaintext.serial_number_string(private_key, program_id, record_name) {
                 let record_data: RecordData = RecordData {
-                    record: plaintext.deref().clone(),
+                    record: plaintext.to_string(),
                     serial_number,
                     record_meta: record_org.record_meta.clone(),
                 };
