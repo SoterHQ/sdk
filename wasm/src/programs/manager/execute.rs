@@ -448,24 +448,30 @@ impl ProgramManager {
         );
         authorizations.push(Authorization::from(authorize_program.clone()));
 
-        log("Creating execution_id for execute program");
-        let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values())
-            .map_err(|e| e.to_string())?
-            .root();
+        let program_id = program_native.id().to_string();
+        if program_id == "credits.aleo" && (function == "split" ||function == "upgrade") {
+            log("Creating credits.aleo. split or upgrade transaction");   
+        } else {
+            log("Creating execution_id for execute program. {program_id}, function {function}");
+            let execution_id = *TransactionNative::transitions_tree(authorize_program.transitions().values())
+                .map_err(|e| e.to_string())?
+                .root();
+    
+            let authorize_fee = authorize_fee!(
+                process,
+                private_key,
+                fee_record,
+                minimum_fee_cost,
+                priority_fee_in_microcredits,
+                fee_proving_key,
+                fee_verifying_key,
+                execution_id,
+                rng
+            );
+    
+            authorizations.push(Authorization::from(authorize_fee));
+        }
 
-        let authorize_fee = authorize_fee!(
-            process,
-            private_key,
-            fee_record,
-            minimum_fee_cost,
-            priority_fee_in_microcredits,
-            fee_proving_key,
-            fee_verifying_key,
-            execution_id,
-            rng
-        );
-
-        authorizations.push(Authorization::from(authorize_fee));
 
         Ok(serde_json::to_string_pretty(&authorizations).unwrap_or_default())
     }
