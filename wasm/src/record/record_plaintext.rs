@@ -22,7 +22,7 @@ use crate::{
     }, Address, Credits, GraphKey, Plaintext, PrivateKey
 };
 use snarkvm_console::{
-    account::ViewKey, prelude::{FromBytes, ToBits, ToBytes, ToFields}, program::Owner
+    prelude::{FromBytes, ToBits, ToBytes, ToFields}, program::Owner
 };
 
 use anyhow::Context;

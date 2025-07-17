@@ -22,11 +22,9 @@ use crate::{
     ExecutionResponse,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
     authorize_fee,
     authorize_program,
-    calculate_minimum_fee,
     execute_fee,
     execute_program,
     log,
@@ -42,13 +40,10 @@ use crate::{
     },
 };
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
-use snarkvm_console::network::{ConsensusVersion, Network};
+use snarkvm_console::network::ConsensusVersion;
 use snarkvm_ledger_query::{Query, QueryTrait};
 use snarkvm_ledger_store::helpers::memory::BlockMemory;
-use snarkvm_synthesizer::{
-    prelude::{cost_in_microcredits_v1, execution_cost_v1, execution_cost_v2},
-    process::InclusionVersion,
-};
+use snarkvm_synthesizer::process::InclusionVersion;
 
 // use core::ops::Add;
 use js_sys::{Array, Object};
@@ -88,7 +83,7 @@ impl ProgramManager {
         proving_key: Option<ProvingKey>,
         verifying_key: Option<VerifyingKey>,
         url: Option<String>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<ExecutionResponse, String> {
         log(&format!("Executing local function: {function}"));
         let node_url = url.as_deref().unwrap_or(DEFAULT_URL);
@@ -177,7 +172,7 @@ impl ProgramManager {
         verifying_key: Option<VerifyingKey>,
         fee_proving_key: Option<ProvingKey>,
         fee_verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log(&format!("Executing function: {function} on-chain"));
         let fee_record = match fee_record {
@@ -304,7 +299,7 @@ impl ProgramManager {
         imports: Option<Object>,
         proving_key: Option<ProvingKey>,
         verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<u64, String> {
         log(
             "Disclaimer: Fee estimation is experimental and may not represent a correct estimate on any current or future network",
@@ -336,7 +331,7 @@ impl ProgramManager {
         let program = ProgramNative::from_str(program).map_err(|err| err.to_string())?;
         let locator = program.id().to_string().add("/").add(function);
 
-        let block_height = {
+        let _block_height = {
             let query: Query<_, BlockMemory<CurrentNetwork>> = Query::from(node_url);
             let block_height = query.current_block_height_async().await.map_err(|e| e.to_string())?;
             trace.prepare_async(&query).await.map_err(|err| err.to_string())?;

@@ -20,11 +20,9 @@ use crate::{
     Authorization,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
     authorize_fee,
     authorize_program,
-    calculate_minimum_fee,
     execute_fee,
     execute_program,
     log,
@@ -42,13 +40,10 @@ use crate::{
 use js_sys::Array;
 use rand::{SeedableRng, rngs::StdRng};
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
-use snarkvm_console::prelude::{ConsensusVersion, Network};
-use snarkvm_ledger_query::{Query, QueryTrait};
+use snarkvm_console::prelude::ConsensusVersion;
+use snarkvm_ledger_query::Query;
 use snarkvm_ledger_store::helpers::memory::BlockMemory;
-use snarkvm_synthesizer::{
-    prelude::{execution_cost_v1, execution_cost_v2},
-    process::InclusionVersion,
-};
+use snarkvm_synthesizer::process::InclusionVersion;
 use snarkvm_synthesizer_program::StackKeys;
 
 use std::{ops::Add, str::FromStr};
@@ -86,7 +81,7 @@ impl ProgramManager {
         transfer_verifying_key: Option<VerifyingKey>,
         fee_proving_key: Option<ProvingKey>,
         fee_verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing transfer program");
         // Prepare the fees.

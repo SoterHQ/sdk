@@ -19,9 +19,7 @@ use super::*;
 use crate::{
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
-    calculate_minimum_fee,
     authorize_fee,
     authorize_program,
     execute_fee,
@@ -42,9 +40,8 @@ use crate::{
 use snarkvm_ledger_store::helpers::memory::BlockMemory;
 use snarkvm_ledger_query::Query;
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
-use snarkvm_console::prelude::{ConsensusVersion, Network};
-use snarkvm_ledger_query::QueryTrait;
-use snarkvm_synthesizer::{prelude::{execution_cost_v1, execution_cost_v2}, process::InclusionVersion};
+use snarkvm_console::prelude::ConsensusVersion;
+use snarkvm_synthesizer::process::InclusionVersion;
 use snarkvm_synthesizer_program::StackKeys;
 
 use js_sys::Array;
@@ -80,7 +77,7 @@ impl ProgramManager {
         join_verifying_key: Option<VerifyingKey>,
         fee_proving_key: Option<ProvingKey>,
         fee_verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing join program");
         let fee_record = match fee_record {

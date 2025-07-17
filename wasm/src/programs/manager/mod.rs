@@ -37,9 +37,7 @@ use crate::{
         ProgramIDNative,
         ProgramNative,
         ProvingKeyNative,
-        QueryNative,
         VerifyingKeyNative,
-        cost_in_microcredits_v2,
         deployment_cost,
     },
 };
@@ -156,25 +154,5 @@ impl ProgramManager {
         } else {
             Ok(())
         }
-    }
-
-    pub(crate) fn validate_fee_record(
-        fee_record: &Option<RecordPlaintext>,
-        minimum_execution_cost: u64,
-        priority_fee_microcredits: u64,
-    ) -> Result<(), String> {
-        let total_fee = priority_fee_microcredits.saturating_add(minimum_execution_cost);
-        if let Some(fee_record) = fee_record {
-            log("Validating the fee record");
-            if fee_record.microcredits() < total_fee {
-                return Err(format!(
-                    "Fee record does not have enough credits to pay for a fee of {} credits. (base fee: {} credits - priority fee: {} credits)",
-                    total_fee as f64 / 1_000_000.0,
-                    minimum_execution_cost as f64 / 1_000_000.0,
-                    priority_fee_microcredits as f64 / 1_000_000.0,
-                ));
-            }
-        }
-        Ok(())
     }
 }

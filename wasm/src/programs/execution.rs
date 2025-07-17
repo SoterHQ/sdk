@@ -25,7 +25,6 @@ use crate::{
         ExecutionNative,
         IdentifierNative,
         ProcessNative,
-        ProgramID,
         ProgramNative,
         VerifyingKeyNative,
     },
@@ -33,7 +32,7 @@ use crate::{
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
 use js_sys::{Array, Object, Reflect};
-use snarkvm_console::{prelude::ConsensusVersion, program::Network};
+use snarkvm_console::program::Network;
 use snarkvm_synthesizer::process::InclusionVersion;
 use std::{ops::Deref, str::FromStr};
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};

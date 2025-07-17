@@ -73,7 +73,7 @@ pub fn output_to_js_value(output: &OutputNative, convert_to_js: bool) -> JsValue
             };
             JsValue::from(private_output)
         }
-        /// The commitment, checksum, (optional) record ciphertext, and (optional) sender ciphertext.
+        // The commitment, checksum, (optional) record ciphertext, and (optional) sender ciphertext.
         OutputNative::Record(commitment, checksum, record_ciphertext, _) => {
             let value = if let Some(record_ciphertext) = record_ciphertext {
                 if convert_to_js {

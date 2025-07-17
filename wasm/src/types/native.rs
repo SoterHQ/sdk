@@ -39,12 +39,10 @@ pub use snarkvm_console::{
     types::{Field, Group, Scalar, U64},
 };
 use snarkvm_ledger_block::{Execution, Input, Output, Transaction, Transition};
-pub use snarkvm_ledger_query::Query;
-pub use snarkvm_ledger_store::helpers::memory::BlockMemory;
 pub use snarkvm_synthesizer::{
     Process,
     Program,
-    process::{cost_in_microcredits_v2, deployment_cost},
+    process::deployment_cost,
     Authorization,
     snark::{ProvingKey, VerifyingKey},
 };
@@ -87,7 +85,7 @@ pub type RecordPlaintextNative = Record<CurrentNetwork, PlaintextNative>;
 
 // Program types
 pub type ArgumentNative = Argument<CurrentNetwork>;
-type CurrentBlockMemory = BlockMemory<CurrentNetwork>;
+// type CurrentBlockMemory = BlockMemory<CurrentNetwork>;
 pub type ExecutionNative = Execution<CurrentNetwork>;
 pub type FutureNative = Future<CurrentNetwork>;
 pub type IdentifierNative = Identifier<CurrentNetwork>;
@@ -100,7 +98,7 @@ pub type ProgramIDNative = ProgramID<CurrentNetwork>;
 pub type ProgramNative = Program<CurrentNetwork>;
 pub type ProgramOwnerNative = ProgramOwner<CurrentNetwork>;
 pub type ProvingKeyNative = ProvingKey<CurrentNetwork>;
-pub type QueryNative = Query<CurrentNetwork, CurrentBlockMemory>;
+// pub type QueryNative = Query<CurrentNetwork, CurrentBlockMemory>;
 pub type ResponseNative = Response<CurrentNetwork>;
 pub type TransactionNative = Transaction<CurrentNetwork>;
 pub type TransitionNative = Transition<CurrentNetwork>;

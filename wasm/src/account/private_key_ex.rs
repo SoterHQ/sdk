@@ -17,12 +17,10 @@
 use crate::{
     account::ViewKey,
     record::RecordCiphertext,
-    types::native::RecordPlaintextNative as Record,
     PrivateKey,
     RecordPlaintext,
 };
 
-use core::ops::Deref;
 use wasm_bindgen::prelude::*;
 
 use anyhow::Result as AnyhowResult;

@@ -20,10 +20,8 @@ use crate::{
     OfflineQuery,
     PrivateKey,
     Authorization,
-    RecordPlaintext,
     Transaction,
     authorize_fee,
-    authorize_program,
     execute_fee,
     log,
     types::native::{
@@ -40,7 +38,6 @@ use crate::{
 use snarkvm_ledger_store::helpers::memory::BlockMemory;
 use snarkvm_ledger_query::Query;
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
-use snarkvm_synthesizer::process::InclusionVersion;
 use anyhow::Error;
 use js_sys::Object;
 use rand::{rngs::StdRng, SeedableRng};
@@ -93,7 +90,7 @@ impl ProgramManager {
         imports: Option<Object>,
         fee_proving_key: Option<ProvingKey>,
         fee_verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Creating deployment transaction");
         let fee_record = match fee_record {

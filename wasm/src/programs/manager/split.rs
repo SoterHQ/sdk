@@ -20,7 +20,6 @@ use crate::{
     Authorization,
     OfflineQuery,
     PrivateKey,
-    RecordPlaintext,
     Transaction,
     authorize_program,
     execute_program,
@@ -58,7 +57,7 @@ impl ProgramManager {
         url: Option<String>,
         split_proving_key: Option<ProvingKey>,
         split_verifying_key: Option<VerifyingKey>,
-        offline_query: Option<OfflineQuery>,
+        _offline_query: Option<OfflineQuery>,
     ) -> Result<Transaction, String> {
         log("Executing split program");
         let amount_record =
