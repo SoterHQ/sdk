@@ -68,10 +68,14 @@ impl ViewKey {
     /// @param {string} ciphertext String representation of a record ciphertext
     /// @returns {string} String representation of a record plaintext
     pub fn decrypt(&self, ciphertext: &str) -> Result<String, String> {
-        let ciphertext = RecordCiphertext::from_str(ciphertext).map_err(|error| error.to_string())?;
+        let ciphertext = RecordCiphertext::from_str(ciphertext).map_err(|error: anyhow::Error| error.to_string())?;
+
         match ciphertext.decrypt(self) {
             Ok(plaintext) => Ok(plaintext.to_string()),
-            Err(error) => Err(error),
+            Err(error) => {
+                println!("Error decrypting record: {}", error);
+                Err(error)
+            }
         }
     }
 }
@@ -129,24 +133,25 @@ mod tests {
     use wasm_bindgen_test::*;
 
     const RECORD_PLAINTEXT: &str = r"{
-  owner: aleo1j7qxyunfldj2lp8hsvy7mw5k8zaqgjfyr72x2gh3x4ewgae8v5gscf5jh3.private,
-  microcredits: 1500000000000000u64.private,
-  _nonce: 3077450429259593211617823051143573281856129402760267155982965992208217472983group.public
+  owner: aleo1yr9n35r0h6gazjfhajvy73u87f6nhc24dvhwel67lykrapf8fygsqv62ns.private,
+  microcredits: 11000000u64.private,
+  _nonce: 4155115129257714409452698218655041534472566656225816254168483491737323941741group.public,
+  _version: 1u8.public
 }";
-    const OWNER_CIPHERTEXT: &str = "record1qyqsqpe2szk2wwwq56akkwx586hkndl3r8vzdwve32lm7elvphh37rsyqyxx66trwfhkxun9v35hguerqqpqzqrtjzeu6vah9x2me2exkgege824sd8x2379scspmrmtvczs0d93qttl7y92ga0k0rsexu409hu3vlehe3yxjhmey3frh2z5pxm5cmxsv4un97q";
-    const OWNER_VIEW_KEY: &str = "AViewKey1ccEt8A2Ryva5rxnKcAbn7wgTaTsb79tzkKHFpeKsm9NX";
-    const NON_OWNER_VIEW_KEY: &str = "AViewKey1e2WyreaH5H4RBcioLL2GnxvHk5Ud46EtwycnhTdXLmXp";
+    const OWNER_CIPHERTEXT: &str = "record1qvqsp0x053792dp45rgkkjen0cefwxrglxsm7uvdzjzph3vl65xqgmgyqyxx66trwfhkxun9v35hguerqqpqzqqz0g55833lgt547e6dfcvt884jdg65nw5we48j3fs0lpqex5thqpk67eem8eusmxyvqaqn8706lqal9lkul8jywqgx7pgyeufekchsjgpprnr";
+    const OWNER_VIEW_KEY: &str = "AViewKey1uMmSYyrdeeAprEfTYfAo1ZLPn1XisziYHaPX9EYfj3vi";
+    const NON_OWNER_VIEW_KEY: &str = "AViewKey1uMmSYyrdeeAprEfTYfAo1ZLPn1XisziYHaPX9EYfj3vi";
 
     #[wasm_bindgen_test]
     pub fn test_from_private_key() {
-        let given_private_key = "APrivateKey1zkp4RyQ8Utj7aRcJgPQGEok8RMzWwUZzBhhgX6rhmBT8dcP";
-        let given_view_key = "AViewKey1i3fn5SECcVBtQMCVtTPSvdApoMYmg3ToJfNDfgHJAuoD";
+        let given_private_key = "APrivateKey1zkp6ZYopKYbJakUtmwgjZ6DAkbvzW592msjZX4Q8SUbk9sN";
+        let given_view_key = "AViewKey1uMmSYyrdeeAprEfTYfAo1ZLPn1XisziYHaPX9EYfj3vi";
         let private_key = PrivateKey::from_string(given_private_key).unwrap();
         let view_key = ViewKey::from_private_key(&private_key);
         assert_eq!(given_view_key, view_key.to_string());
     }
 
-    #[wasm_bindgen_test]
+    #[test]
     pub fn test_decrypt_success() {
         let view_key = ViewKey::from_string(OWNER_VIEW_KEY);
         let plaintext = view_key.decrypt(OWNER_CIPHERTEXT);

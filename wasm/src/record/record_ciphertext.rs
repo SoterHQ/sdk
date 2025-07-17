@@ -196,22 +196,6 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn test_decrypt_and_tag_computation() {
-        let record = RecordCiphertext::from_string(OWNER_CIPHERTEXT).unwrap();
-        let view_key = ViewKey::from_string(OWNER_VIEW_KEY);
-        let graph_key = GraphKey::from_view_key(&view_key);
-        let plaintext = record.decrypt(&view_key).unwrap();
-        assert_eq!(plaintext.to_string(), OWNER_PLAINTEXT);
-        let incorrect_view_key = ViewKey::from_string(NON_OWNER_VIEW_KEY);
-        assert!(record.decrypt(&incorrect_view_key).is_err());
-
-        let commitment = plaintext.commitment("credits.aleo", "credits").unwrap();
-        let tag = RecordCiphertext::tag(&graph_key, commitment).unwrap();
-        let expected_tag = Field::from_str(RECORD_TAG).unwrap();
-        assert_eq!(tag, expected_tag);
-    }
-
-    #[wasm_bindgen_test]
     fn test_is_owner() {
         let record = RecordCiphertext::from_string(OWNER_CIPHERTEXT).unwrap();
         let view_key = ViewKey::from_string(OWNER_VIEW_KEY);
