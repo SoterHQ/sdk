@@ -33,6 +33,7 @@ use crate::{
 use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
 use js_sys::{Array, Object, Reflect};
+use snarkvm_console::{prelude::ConsensusVersion, program::Network};
 use snarkvm_synthesizer::process::InclusionVersion;
 use std::{ops::Deref, str::FromStr};
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
@@ -123,6 +124,7 @@ pub fn verify_function_execution(
     function_id: &str,
     imports: Option<Object>,
     imported_verifying_keys: Option<Object>,
+    block_height: u32,
 ) -> Result<bool, String> {
     // Get the function
     let function = IdentifierNative::from_str(function_id).map_err(|e| e.to_string())?;
@@ -183,6 +185,12 @@ pub fn verify_function_execution(
     }
 
     // Verify the execution.
-    // process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, execution).map_or(Ok(false), |_| Ok(true))
-    Ok(true)
+    let consensus_version = <CurrentNetwork as Network>::CONSENSUS_VERSION(block_height).map_err(|e| e.to_string())?;
+    let inclusion_version =
+        if block_height >= <CurrentNetwork as Network>::INCLUSION_UPGRADE_HEIGHT().map_err(|e| e.to_string())? {
+            InclusionVersion::V1
+        } else {
+            InclusionVersion::V0
+        };
+    process.verify_execution(consensus_version, VarunaVersion::V2, inclusion_version, execution).map_or(Ok(false), |_| Ok(true))
 }

@@ -269,7 +269,7 @@ impl ProgramManager {
         );
 
         // Verify the execution
-        // process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
+        process.verify_execution(ConsensusVersion::V8, VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
 
         log("Creating execution transaction");
         let transaction = TransactionNative::from_execution(execution, Some(fee)).map_err(|err| err.to_string())?;

@@ -28,6 +28,7 @@ use crate::{
     process_inputs,
     types::native::{CurrentAleo, CurrentNetwork, IdentifierNative, ProcessNative, TransactionNative},
 };
+use snarkvm_console::prelude::ConsensusVersion;
 use snarkvm_ledger_store::helpers::memory::BlockMemory;
 use snarkvm_ledger_query::Query;
 use js_sys::Array;
@@ -103,7 +104,7 @@ impl ProgramManager {
             .map_err(|e| e.to_string())?;
 
         log("Verifying the split execution");
-        // process.verify_execution(VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
+        process.verify_execution(ConsensusVersion::V8, VarunaVersion::V2, InclusionVersion::V0, &execution).map_err(|err| err.to_string())?;
 
         log("Creating execution transaction for split");
         let transaction = TransactionNative::from_execution(execution, None).map_err(|err| err.to_string())?;
