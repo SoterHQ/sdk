@@ -23,49 +23,49 @@ doctest = false
 
 [dependencies.snarkvm-algorithms]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 
 [dependencies.snarkvm-circuit-network]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 
 [dependencies.snarkvm-console]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-block]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-ledger-query]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-ledger-store]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 
 [dependencies.snarkvm-parameters]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-synthesizer-program]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "wasm" ]
 
 [dependencies.snarkvm-synthesizer]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "async", "wasm" ]
 
 [dependencies.snarkvm-wasm]
 git = "https://github.com/ProvableHQ/snarkvm.git"
-branch = "testnet"
+branch = "mainnet"
 features = [ "console", "fields", "utilities" ]
 
 [dependencies.anyhow]
@@ -146,7 +146,7 @@ features = [
 ]
 
 [features]
-default = [ "serial", "browser" ]
+default = [ "serial", "browser", "testnet" ]
 serial = [ "snarkvm-console/serial", "snarkvm-synthesizer/serial", "snarkvm-ledger-query/serial", "snarkvm-ledger-block/serial", "snarkvm-ledger-store/serial" ]
 browser = [ ]
 testnet = [ ]
